@@ -11,8 +11,16 @@ class TeamPage extends StatefulWidget {
 class _TeamPageState extends State<TeamPage> {
   final _controller = TextEditingController();
   List players = [
-    ['Jan Imhof', false],
-    ['Matti Schlutz', false],
+    ['Ava Mitchell', false],
+    ['Aiden Morgan', false],
+    ['Emma Hayes', false],
+    ['Ethan Parker', false],
+    ['Harper Sullivan', false],
+    ['Jackson Reed', false],
+    ['Logan Brooks', false],
+    ['Mason Cooper', false],
+    ['Olivia Bennett', false],
+    ['Sophia Carter', false],
   ];
 
   void checkBoxChanged(int index) {
@@ -40,25 +48,6 @@ class _TeamPageState extends State<TeamPage> {
       players.removeAt(index);
     });
   }
-
-  void openDialog() => showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          alignment: Alignment.bottomCenter,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.zero)),
-          content: Builder(builder: (context) {
-            var width = MediaQuery.of(context).size.width;
-            return SizedBox(
-              width: width,
-              child: TextField(
-                decoration:
-                    InputDecoration(hintText: 'Spielername eingeben ...'),
-              ),
-            );
-          }),
-        ),
-      );
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +82,10 @@ class _TeamPageState extends State<TeamPage> {
             child: FloatingActionButton(
               foregroundColor: const Color.fromARGB(255, 0, 0, 0),
               backgroundColor: const Color.fromARGB(255, 189, 224, 142),
-              onPressed: openDialog,
+              onPressed: null,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [Icon(Icons.add), Text('Spieler')],
+                children: [Icon(Icons.playlist_add_check_rounded), Text('Fertig')],
               ),
             ),
           ),

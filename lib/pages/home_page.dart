@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:teamer/pages/team_page.dart';
-import 'package:teamer/pages/event_page.dart';
+import 'package:teamer/pages/stats_page.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({super.key});
@@ -42,7 +42,7 @@ class _HomePageState extends State<HomePage> {
         ),
         body: [
           TeamPage(),
-          EventPage(),
+          StatsPage(),
         ][currentPageIndex],
         extendBody: true,
         bottomNavigationBar: Stack(children: <Widget>[
