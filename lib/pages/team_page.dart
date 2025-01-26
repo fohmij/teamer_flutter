@@ -53,26 +53,46 @@ class _TeamPageState extends State<TeamPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 243, 250, 236),
-      body: Stack(children: <Widget>[
-        ListView.separated(
-          itemCount: players.length,
-          itemBuilder: (BuildContext context, index) {
-            return PlayersList(
-              playersName: players[index][0],
-              playerSelected: players[index][1],
-              onChanged: (value) => checkBoxChanged(index),
-              deleteFunction: (context) => deleteTask(index),
-            );
-          },
-          separatorBuilder: (context, index) {
-            return Divider(
-              color: const Color.fromARGB(255, 230, 230, 230),
-              thickness: 1,
-              height: 1,
-            );
-          },
-        ),
-      ]),
+      body: ListView.separated(
+        itemCount: players.length + 1,
+        itemBuilder: (BuildContext context, index) => (index != players.length)
+            ? PlayersList(
+                playersName: players[index][0],
+                playerSelected: players[index][1],
+                onChanged: (value) => checkBoxChanged(index),
+                deleteFunction: (context) => deleteTask(index),
+              )
+            // Add new player Button
+            : Padding(
+                padding: const EdgeInsets.only(left: 34.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.add,
+                      color: const Color.fromARGB(255, 187, 187, 187),
+                      ),
+                    TextButton(
+                      onPressed: null,
+                      child: Text(
+                        "Neuer Spieler",
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.grey[360],
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+        separatorBuilder: (context, index) {
+          return Divider(
+            color: const Color.fromARGB(255, 230, 230, 230),
+            thickness: 1,
+            height: 1,
+          );
+        },
+      ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -85,7 +105,10 @@ class _TeamPageState extends State<TeamPage> {
               onPressed: null,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [Icon(Icons.playlist_add_check_rounded), Text('Fertig')],
+                children: [
+                  Icon(Icons.playlist_add_check_rounded),
+                  Text('Team')
+                ],
               ),
             ),
           ),
