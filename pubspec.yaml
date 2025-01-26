@@ -22,12 +22,16 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^2.0.0
-  flutter_launcher_icons: ^0.14.1
+  flutter_launcher_icons: ^0.14.3
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  ios: true
-  image_path: "assets/icon/icon.png"
+  ios: "AppIcon"
+  image_path: "assets/icon/ic_launcher-web.png" # Set the path of the icon image (preferably in the root folder of your project)
+  adaptive_icon_foreground: "assets/icon/icon.png" # Set the foreground image (same or different from image_path)
+  adaptive_icon_background: "#5F8F3C"
+  remove_alpha_ios: true
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true
