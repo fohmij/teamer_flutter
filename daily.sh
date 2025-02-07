@@ -1,12 +1,14 @@
 #!/usr/bin/bash
-# read -p "Soll das Skript wirklich ausgeführt werden? (Y/N):" antwort
+read -p "Commit-Messager: (Enter: daily commit):" message
 
-#if [[  "$antwort" == "Y" || "$antwort" == "y" ]]; then
-	echo "Daily add,commit,push wird ausgeführt..."
+if [[  "$message" == "" ]]; then
+	echo "Add,commit,push wird ausgeführt..."
 	git add .
 	git commit -m "Daily commit"
 	git push
-#else
-#	echo "Skript wird nicht ausgeführt"
-#	exit 1
-#fi
+else
+	echo "Commit-Massage eingegeben"
+	git add .
+	git commit -m "$message"
+	git push
+fi
