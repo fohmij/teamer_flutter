@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:teamer/pages/home_page.dart';
 
 class StatsPage extends StatefulWidget {
   StatsPage({super.key});

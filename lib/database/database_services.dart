@@ -1,16 +1,14 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:sqflite/sqlite_api.dart';
-import 'package:flutter_sqflite_tutorial_app/models/task.dart';
+import 'package:teamer/database/player.dart';
 
 class DatabaseService {
   static Database? _db;
   static final DatabaseService instance = DatabaseService._constructor();
 
-  final String _tasksTableName = "tasks";
-  final String _tasksIdColumnName = "id";
-  final String _tasksContentColumnName = "content";
-  final String _tasksStatusColumnName = "status";
+  final String _playersTableName = "player";
+  final String _playersIDColumnName = "playerID";
+  final String _playersNameColumnName = "name";
 
   DatabaseService._constructor();
 
@@ -26,10 +24,9 @@ class DatabaseService {
     final database =
         await openDatabase(databasePath, version: 1, onCreate: (db, version) {
       db.execute('''
-        CREATE TABLE $_tasksTableName(
-          $_tasksIdColumnName INTEGER PRIMARY KEY,
-          $_tasksContentColumnName TEXT NOT NULL,
-          $_tasksStatusColumnName INTEGER NOT NULL
+        CREATE TABLE $_playersTableName(
+          $_playersIDColumnName INTEGER PRIMARY KEY,
+          $_playersNameColumnName TEXT NOT NULL,
         )
         ''');
     });
@@ -37,26 +34,25 @@ class DatabaseService {
     return database;
   }
 
-  void addTask(
+  void addPlayer(
     String content,
   ) async {
     final db = await database;
-    await db.insert(_tasksTableName, {
-      _tasksContentColumnName: content,
-      _tasksStatusColumnName: 0,
+    await db.insert(_playersTableName, {
+      _playersIDColumnName: content,
+      _playersNameColumnName: 0,
     });
   }
 
-  Future<List<Task>> getTasks() async {
+  Future<List<Player>> getTasks() async {
     final db = await database;
-    final data = await db.query(_tasksTableName);
-    List<Task> tasks = data
-        .map((e) => Task(
-            id: e["id"] as int,
-            status: e["status"] as int,
-            content: e["content"] as String))
+    final data = await db.query(_playersTableName);
+    List<Player> players = data
+        .map((e) => Player(
+            playerID: e["playerID"] as int,
+            name: e["name"] as String))
         .toList();
-    print("TastNr:  ${tasks.length}");
-    return tasks;
+    print("TastNr:  ${players.length}");
+    return players;
   }
 }

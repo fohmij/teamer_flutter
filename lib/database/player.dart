@@ -1,9 +1,9 @@
 class Player {
-  final int primaryKey;
+  final int playerID;
   final String name;
 
   Player({
-    required this.primaryKey,
+    required this.playerID,
     required this.name,
   });
 }
