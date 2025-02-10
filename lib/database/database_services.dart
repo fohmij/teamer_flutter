@@ -7,8 +7,9 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._constructor();
 
   final String _playersTableName = "player";
-  final String _playersIDColumnName = "playerID";
+  final String _playersIDColumnName = "id";
   final String _playersNameColumnName = "name";
+  final String _playersStatusColumnName = "status";
 
   DatabaseService._constructor();
 
@@ -27,20 +28,20 @@ class DatabaseService {
         CREATE TABLE $_playersTableName(
           $_playersIDColumnName INTEGER PRIMARY KEY,
           $_playersNameColumnName TEXT NOT NULL,
+          $_playersStatusColumnName INTEGER NOT NULL
         )
         ''');
     });
-    print("Hallo");
     return database;
   }
 
   void addPlayer(
-    String content,
+    String name,
   ) async {
     final db = await database;
     await db.insert(_playersTableName, {
-      _playersIDColumnName: content,
-      _playersNameColumnName: 0,
+      _playersNameColumnName: name,
+      _playersStatusColumnName: 0,
     });
   }
 
@@ -49,10 +50,33 @@ class DatabaseService {
     final data = await db.query(_playersTableName);
     List<Player> players = data
         .map((e) => Player(
-            playerID: e["playerID"] as int,
-            name: e["name"] as String))
+            id: e["id"] as int,
+            name: e["name"] as String,
+            status: e["status"] as int))
         .toList();
-    print("TastNr:  ${players.length}");
     return players;
+  }  
+
+  void updateTaskStatus(int id, int status) async {
+    final db = await database;
+    await db.update(
+        _playersTableName,
+        {
+          _playersStatusColumnName: status,
+        },
+        where: 'id = ?',
+        whereArgs: [
+          id,
+        ]);
+  }
+
+  void deleteTask(int id) async {
+    final db = await database;
+    await db.delete(
+        _playersTableName,
+        where: 'id = ?',
+        whereArgs: [
+          id,
+        ]);
   }
 }

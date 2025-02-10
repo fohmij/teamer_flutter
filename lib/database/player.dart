@@ -1,9 +1,11 @@
 class Player {
-  final int playerID;
+  final int id;
   final String name;
+  final int status;
 
   Player({
-    required this.playerID,
+    required this.id,
     required this.name,
+    required this.status,
   });
 }

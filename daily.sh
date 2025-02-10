@@ -8,7 +8,6 @@ if [[  "$message" == "" ]]; then
 	git push
 else
 	echo "Commit-Massage eingegeben"
-	git add .
-	git commit -m "$message"
+	git commit -am "$message"
 	git push
 fi
