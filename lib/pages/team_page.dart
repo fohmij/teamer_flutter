@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:teamer/database/database_services.dart';
 import 'package:teamer/utils/players_list.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../database/player.dart';
 
 class TeamPage extends StatefulWidget {
@@ -20,45 +21,6 @@ class _TeamPageState extends State<TeamPage> {
 
   String? _player;
 
-  List players = [
-    ['Ava Mitchell', false],
-    ['Aiden Morgan', false],
-    ['Emma Hayes', false],
-    ['Ethan Parker', false],
-    ['Harper Sullivan', false],
-    ['Jackson Reed', false],
-    ['Logan Brooks', false],
-    ['Mason Cooper', false],
-    ['Olivia Bennett', false],
-    ['Sophia Carter', false],
-  ];
-
-  void checkBoxChanged(int index) {
-    setState(() {
-      players[index][1] = !players[index][1];
-    });
-  }
-
-  void saveNewPlayer() {
-    setState(() {
-      players.add([_controller.text, false]);
-      _controller.clear();
-    });
-  }
-
-  void saveNewPlayerEnter(String playerName) {
-    setState(() {
-      players.add([playerName, false]);
-      _controller.clear();
-    });
-  }
-
-  void deleteTask(int index) {
-    setState(() {
-      players.removeAt(index);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,31 +39,73 @@ class _TeamPageState extends State<TeamPage> {
                 },
                 itemBuilder: (context, index) {
                   Player player = snapshot.data![index];
-                  return ListTile(
-                    onLongPress: () {
-                      _databaseService.deleteTask(
-                        player.id,
-                      );
-                      setState(() {});
-                    },
-                    title: Padding(
-                      padding: const EdgeInsets.only(left: 14.0),
-                      child: Text(
-                        player.name,
-                        style: TextStyle(
-                          fontSize: 20,
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      outlinedButtonTheme: const OutlinedButtonThemeData(
+                        style: ButtonStyle(
+                          iconColor: WidgetStatePropertyAll(Colors.white),
                         ),
                       ),
                     ),
-                    trailing: Checkbox(
-                      value: player.status == 1,
-                      onChanged: (value) {
-                        _databaseService.updateTaskStatus(
-                          player.id,
-                          value == true ? 1 : 0,
-                        );
-                        setState(() {});
-                      },
+                    child: Slidable(
+                      startActionPane: ActionPane(
+                        extentRatio: 0.2,
+                        motion: StretchMotion(),
+                        children: [
+                          SlidableAction(
+                            backgroundColor: Color.fromARGB(255, 190, 71, 62),
+                            onPressed: (context) {
+                              _databaseService.deleteTask(
+                                player.id,
+                              );
+                              setState(() {});
+                            },
+                            icon: Icons.delete,
+                            borderRadius: BorderRadius.circular(7),
+                            foregroundColor: Colors.white,
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        tileColor: player.status == 0
+                            ? Color.fromARGB(255, 243, 250, 236)
+                            : const Color.fromARGB(255, 139, 204, 101),
+                        onLongPress: () {
+                          _databaseService.deleteTask(
+                            player.id,
+                          );
+                          setState(() {});
+                        },
+                        onTap: () {
+                          int newStatus = player.status == 1 ? 0 : 1;
+                          _databaseService.updateTaskStatus(
+                            player.id,
+                            newStatus,
+                          );
+                          setState(() {});
+                        },
+                        title: Padding(
+                          padding: const EdgeInsets.only(left: 14.0),
+                          child: Text(
+                            player.name,
+                            style: TextStyle(
+                              fontSize: 20,
+                              // fontWeight: player.status == 1 ? FontWeight.bold : FontWeight.normal
+                            ),
+                          ),
+                        ),
+                        trailing: Checkbox(
+                          value: player.status == 1,
+                          activeColor: Colors.green,
+                          onChanged: (value) {
+                            _databaseService.updateTaskStatus(
+                              player.id,
+                              value == true ? 1 : 0,
+                            );
+                            setState(() {});
+                          },
+                        ),
+                      ),
                     ),
                   );
                 });
@@ -119,7 +123,7 @@ class _TeamPageState extends State<TeamPage> {
                 showDialog(
                     context: this.context,
                     builder: (_) => AlertDialog(
-      backgroundColor: Color.fromARGB(255, 243, 250, 236),
+                          backgroundColor: Color.fromARGB(255, 243, 250, 236),
                           title: const Text('Neuer Spieler'),
                           content:
                               Column(mainAxisSize: MainAxisSize.min, children: [
@@ -131,8 +135,8 @@ class _TeamPageState extends State<TeamPage> {
                               },
                               decoration: InputDecoration(
                                   border: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey)
-                                  ),
+                                      borderSide:
+                                          BorderSide(color: Colors.grey)),
                                   hintText: 'Name...'),
                               focusNode: _focusNode,
                               autofocus: true,
@@ -264,4 +268,43 @@ class _TeamPageState extends State<TeamPage> {
             height: 1,
           );
         },
+
+  List players = [
+    ['Ava Mitchell', false],
+    ['Aiden Morgan', false],
+    ['Emma Hayes', false],
+    ['Ethan Parker', false],
+    ['Harper Sullivan', false],
+    ['Jackson Reed', false],
+    ['Logan Brooks', false],
+    ['Mason Cooper', false],
+    ['Olivia Bennett', false],
+    ['Sophia Carter', false],
+  ];
+
+  void checkBoxChanged(int index) {
+    setState(() {
+      players[index][1] = !players[index][1];
+    });
+  }
+  void saveNewPlayer() {
+    setState(() {
+      players.add([_controller.text, false]);
+      _controller.clear();
+    });
+  }
+
+  void saveNewPlayerEnter(String playerName) {
+    setState(() {
+      players.add([playerName, false]);
+      _controller.clear();
+    });
+  }
+
+  void deleteTask(int index) {
+    setState(() {
+      players.removeAt(index);
+    });
+  }
+
         */

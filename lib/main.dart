@@ -27,6 +27,11 @@ class MyApp extends StatelessWidget {
         routes: {
           '/eventpage': (context) => EventPage(),
         },
+        theme: ThemeData(
+          iconTheme: IconThemeData(
+            color: Colors.white,
+          )
+        ),
       );
   }
 }
