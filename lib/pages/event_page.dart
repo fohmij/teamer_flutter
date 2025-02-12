@@ -41,6 +41,9 @@ class _EventPageState extends State<EventPage> {
               Text(
                   'Street Floorball bietet ein völlig neues Floorball-Erlebnis und jede Menge Spielspaß. Als Mixed-Sportart spielt jeder gegen jeden, unabhängig von Geschlecht, Alter oder Können.\n',
                   style: TextStyle(fontSize: 18)),
+              Text(
+                  'Weitere Informationen zu den diesjährigen Tour gibt es hier:',
+                  style: TextStyle(fontSize: 18)),
               Padding(
                 padding: const EdgeInsets.only(left: 48.0, right: 48.0),
                 child: Stack(

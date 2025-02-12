@@ -94,7 +94,7 @@ class _StatsPageState extends State<StatsPage> {
         height: 120,
         child: Card(
           elevation: 1,
-          color: const Color.fromARGB(255, 205, 235, 205),
+          color: const Color.fromARGB(255, 205, 225, 235),
           child: Stack(children: <Widget>[
             Padding(
               padding: const EdgeInsets.only(top: 15, left: 15),
@@ -113,6 +113,7 @@ class _StatsPageState extends State<StatsPage> {
                 children: [
                   Icon(
                     icon,
+                    color: Colors.black,
                     size: 30,
                   ),
                 ],

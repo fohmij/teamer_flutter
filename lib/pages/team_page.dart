@@ -29,7 +29,8 @@ class _TeamPageState extends State<TeamPage> {
           future: _databaseService.getTasks(),
           builder: (context, snapshot) {
             return ListView.separated(
-                itemCount: snapshot.data?.length ?? 0,
+                itemCount: (snapshot.data?.length ?? 0) + 1,
+                // itemCount: snapshot.data?.length ?? 0,
                 separatorBuilder: (context, index) {
                   return Divider(
                     color: const Color.fromARGB(255, 230, 230, 230),
@@ -38,76 +39,334 @@ class _TeamPageState extends State<TeamPage> {
                   );
                 },
                 itemBuilder: (context, index) {
-                  Player player = snapshot.data![index];
-                  return Theme(
-                    data: Theme.of(context).copyWith(
-                      outlinedButtonTheme: const OutlinedButtonThemeData(
-                        style: ButtonStyle(
-                          iconColor: WidgetStatePropertyAll(Colors.white),
+                  if (index == (snapshot.data?.length ?? 0)) {
+                    return Row(
+                      children: [
+                        Spacer(),
+                        Icon(
+                          Icons.add,
+                          color: Colors.grey[500],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 24.0),
+                          child: TextButton(
+                              onPressed: () {
+                                showDialog(
+                                    context: this.context,
+                                    builder: (_) => AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.all(
+                                                  Radius.circular(8.0))),
+                                          backgroundColor: Color.fromARGB(
+                                              255, 243, 250, 236),
+                                          title: Text('Neuer Spieler'),
+                                          content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 30.0),
+                                                  child: TextField(
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        _player = value;
+                                                      });
+                                                    },
+                                                      onSubmitted: (value) {
+                                                        if (_player == null ||
+                                                            _player == "") {
+                                                          return;
+                                                        }
+                                                        _databaseService
+                                                            .addPlayer(_player!);
+                                                        setState(() {
+                                                          _player = null;
+                                                        });
+                                                        Navigator.pop(
+                                                            this.context);
+                                                      },
+                                                    decoration: InputDecoration(
+                                                        border: OutlineInputBorder(
+                                                            borderSide:
+                                                                BorderSide(
+                                                                    color: Colors
+                                                                        .grey)),
+                                                        hintText: 'Name...'),
+                                                    focusNode: _focusNode,
+                                                    autofocus: true,
+                                                  ),
+                                                ),
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 50.0),
+                                                  child: Row(
+                                                    children: [
+                                                      OutlinedButton(
+                                                          style: OutlinedButton
+                                                              .styleFrom(
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            4.0))),
+                                                          ),
+                                                          onPressed: () {
+                                                            Navigator.pop(
+                                                                context);
+                                                          },
+                                                          child: const Text(
+                                                            "Abbrechen",
+                                                            style: TextStyle(
+                                                              color: Colors.black,
+                                                            ),
+                                                          )),
+                                                      Spacer(),
+                                                      SizedBox(width: 70.0,),
+                                                      Spacer(),
+                                                      MaterialButton(
+                                                          color: Color.fromARGB(
+                                                              255, 21, 101, 181),
+                                                      onPressed: () {
+                                                        if (_player == null ||
+                                                            _player == "") {
+                                                          return;
+                                                        }
+                                                        _databaseService
+                                                            .addPlayer(_player!);
+                                                        setState(() {
+                                                          _player = null;
+                                                        });
+                                                        Navigator.pop(
+                                                            this.context);
+                                                      },
+                                                          shape: RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius.all(
+                                                                      Radius.circular(
+                                                                          4.0))),
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    vertical:
+                                                                        12.0,
+                                                                    horizontal:
+                                                                        16.0),
+                                                            child: const Text(
+                                                              "Fertig",
+                                                              style: TextStyle(
+                                                                color:
+                                                                    Colors.white,
+                                                              ),
+                                                            ),
+                                                          )),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ]),
+                                        ));
+                              },
+                              child: Text(
+                                "Neuer Spieler",
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 20.0,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              )),
+                        ),
+                      ],
+                    );
+                  } else {
+                    Player player = snapshot.data![index];
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        outlinedButtonTheme: const OutlinedButtonThemeData(
+                          style: ButtonStyle(
+                            iconColor: WidgetStatePropertyAll(Colors.white),
+                          ),
                         ),
                       ),
-                    ),
-                    child: Slidable(
-                      startActionPane: ActionPane(
-                        extentRatio: 0.2,
-                        motion: StretchMotion(),
-                        children: [
-                          SlidableAction(
-                            backgroundColor: Color.fromARGB(255, 190, 71, 62),
-                            onPressed: (context) {
-                              _databaseService.deleteTask(
-                                player.id,
-                              );
-                              setState(() {});
-                            },
-                            icon: Icons.delete,
-                            borderRadius: BorderRadius.circular(7),
-                            foregroundColor: Colors.white,
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        tileColor: player.status == 0
-                            ? Color.fromARGB(255, 243, 250, 236)
-                            : const Color.fromARGB(255, 139, 204, 101),
-                        onLongPress: () {
-                          _databaseService.deleteTask(
-                            player.id,
-                          );
-                          setState(() {});
-                        },
-                        onTap: () {
-                          int newStatus = player.status == 1 ? 0 : 1;
-                          _databaseService.updateTaskStatus(
-                            player.id,
-                            newStatus,
-                          );
-                          setState(() {});
-                        },
-                        title: Padding(
-                          padding: const EdgeInsets.only(left: 14.0),
-                          child: Text(
-                            player.name,
-                            style: TextStyle(
-                              fontSize: 20,
-                              // fontWeight: player.status == 1 ? FontWeight.bold : FontWeight.normal
+                      child: Slidable(
+                        startActionPane: ActionPane(
+                          extentRatio: 0.2,
+                          motion: StretchMotion(),
+                          children: [
+                            SlidableAction(
+                              backgroundColor: Color.fromARGB(255, 185, 88, 81),
+                              onPressed: (_) {
+                                showDialog(
+                                    context: this.context,
+                                    builder: (_) => AlertDialog(
+                                          backgroundColor: Color.fromARGB(
+                                              255, 243, 250, 236),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.all(
+                                                  Radius.circular(8.0))),
+                                          content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 6.0),
+                                                  child: Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.end,
+                                                    children: [
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                                bottom: 2.0),
+                                                        child: Icon(
+                                                          Icons.delete,
+                                                          size: 25.0,
+                                                          color:
+                                                              Colors.grey[800],
+                                                        ),
+                                                      ),
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                                left: 8.0),
+                                                        child: Text(
+                                                          'Löschen',
+                                                          style: TextStyle(
+                                                            color: Colors.black,
+                                                            fontSize: 20.0,
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                      )
+                                                    ],
+                                                  ),
+                                                ),
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 6.0),
+                                                  child: Divider(),
+                                                ),
+                                                Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 30.0),
+                                                  child: Text(
+                                                    'Soll der Spieler wirklich dauerhaft gelöscht werden?',
+                                                    style: TextStyle(
+                                                      color: Colors.black,
+                                                      fontSize: 20.0,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          bottom: 12.0),
+                                                  child: Divider(),
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    OutlinedButton(
+                                                        style: OutlinedButton
+                                                            .styleFrom(
+                                                          shape: RoundedRectangleBorder(
+                                                              borderRadius: BorderRadius
+                                                                  .all(Radius
+                                                                      .circular(
+                                                                          4.0))),
+                                                        ),
+                                                        onPressed: () {
+                                                          Navigator.pop(
+                                                              context);
+                                                        },
+                                                        child: const Text(
+                                                          "Abbrechen",
+                                                          style: TextStyle(
+                                                            color: Colors.black,
+                                                          ),
+                                                        )),
+                                                    Spacer(),
+                                                    MaterialButton(
+                                                        color: Color.fromARGB(
+                                                            255, 185, 88, 81),
+                                                        onPressed: () {
+                                                          _databaseService
+                                                              .deleteTask(
+                                                            player.id,
+                                                          );
+                                                          setState(() {});
+                                                        },
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.all(
+                                                                    Radius.circular(
+                                                                        4.0))),
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  vertical:
+                                                                      12.0,
+                                                                  horizontal:
+                                                                      16.0),
+                                                          child: const Text(
+                                                            "Löschen",
+                                                            style: TextStyle(
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                          ),
+                                                        )),
+                                                  ],
+                                                )
+                                              ]),
+                                        ));
+                              },
+                              icon: Icons.delete,
+                              borderRadius: BorderRadius.circular(7),
+                              foregroundColor: Colors.white,
                             ),
-                          ),
+                          ],
                         ),
-                        trailing: Checkbox(
-                          value: player.status == 1,
-                          activeColor: Colors.green,
-                          onChanged: (value) {
+                        child: ListTile(
+                          tileColor: player.status == 0
+                              ? Color.fromARGB(255, 243, 250, 236)
+                              : const Color.fromARGB(255, 139, 204, 101),
+                          onTap: () {
+                            int newStatus = player.status == 1 ? 0 : 1;
                             _databaseService.updateTaskStatus(
                               player.id,
-                              value == true ? 1 : 0,
+                              newStatus,
                             );
                             setState(() {});
                           },
+                          title: Padding(
+                            padding: const EdgeInsets.only(left: 14.0),
+                            child: Text(
+                              player.name,
+                              style: TextStyle(
+                                fontSize: 20,
+                                // fontWeight: player.status == 1 ? FontWeight.bold : FontWeight.normal
+                              ),
+                            ),
+                          ),
+                          trailing: Checkbox(
+                            value: player.status == 1,
+                            activeColor: Colors.green,
+                            onChanged: (value) {
+                              _databaseService.updateTaskStatus(
+                                player.id,
+                                value == true ? 1 : 0,
+                              );
+                              setState(() {});
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  );
+                    );
+                  }
                 });
           }),
       floatingActionButton: Column(
@@ -117,55 +376,9 @@ class _TeamPageState extends State<TeamPage> {
             width: 65,
             height: 65,
             child: FloatingActionButton(
-              foregroundColor: const Color.fromARGB(255, 0, 0, 0),
-              backgroundColor: const Color.fromARGB(255, 189, 224, 142),
-              onPressed: () {
-                showDialog(
-                    context: this.context,
-                    builder: (_) => AlertDialog(
-                          backgroundColor: Color.fromARGB(255, 243, 250, 236),
-                          title: const Text('Neuer Spieler'),
-                          content:
-                              Column(mainAxisSize: MainAxisSize.min, children: [
-                            TextField(
-                              onChanged: (value) {
-                                setState(() {
-                                  _player = value;
-                                });
-                              },
-                              decoration: InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderSide:
-                                          BorderSide(color: Colors.grey)),
-                                  hintText: 'Name...'),
-                              focusNode: _focusNode,
-                              autofocus: true,
-                            ),
-                            MaterialButton(
-                                color: const Color.fromARGB(255, 189, 224, 142),
-                                onPressed: () {
-                                  if (_player == null || _player == "") {
-                                    return;
-                                  }
-                                  _databaseService.addPlayer(_player!);
-                                  setState(() {
-                                    _player = null;
-                                  });
-                                  Navigator.pop(this.context);
-                                },
-                                child: const Text(
-                                  "Fertig",
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                  ),
-                                ))
-                          ]),
-                        ));
-                // Verzögere die Fokussierung minimal, damit die Tastatur sicher erscheint
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _focusNode.requestFocus();
-                });
-              },
+              foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+              backgroundColor: const Color.fromARGB(255, 21, 101, 181),
+              onPressed: null,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

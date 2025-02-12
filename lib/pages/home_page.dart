@@ -46,22 +46,32 @@ class _HomePageState extends State<HomePage> {
         ][currentPageIndex],
         extendBody: true,
         bottomNavigationBar: Stack(children: <Widget>[
-          NavigationBar(
-            destinations: [
-              NavigationDestination(
-                  icon: Icon(Icons.group_outlined), label: "Team"),
-              NavigationDestination(
-                  icon: Icon(Icons.star_border), label: "Stats")
-            ],
-            selectedIndex: currentPageIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                currentPageIndex = index;
-                updateAppBarTitle();
-              });
-            },
-            backgroundColor: const Color.fromARGB(199, 204, 238, 204),
-            indicatorColor: const Color.fromARGB(255, 174, 223, 178),
+          NavigationBarTheme(
+            data: NavigationBarThemeData(
+      labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
+        (Set<WidgetState> states) => states.contains(WidgetState.selected)
+            ? const TextStyle(color: Colors.white)
+            : const TextStyle(color: Colors.white),
+      ),
+    ),
+
+            child: NavigationBar(
+              destinations: [
+                NavigationDestination(
+                    icon: Icon(Icons.group_outlined, color: Colors.white,), label: "Team"),
+                NavigationDestination(
+                    icon: Icon(Icons.star_border, color: Colors.white,), label: "Stats")
+              ],
+              selectedIndex: currentPageIndex,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  currentPageIndex = index;
+                  updateAppBarTitle();
+                });
+              },
+              backgroundColor: const Color.fromARGB(198, 38, 96, 171),
+              indicatorColor: const Color.fromARGB(255, 30, 89, 148),
+            ),
           ),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
             SizedBox(
@@ -73,6 +83,7 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 21,
+                  color: Colors.grey[300],
                   fontStyle: FontStyle.italic),
             ),
           ]),
