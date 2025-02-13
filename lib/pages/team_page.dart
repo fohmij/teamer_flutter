@@ -64,26 +64,28 @@ class _TeamPageState extends State<TeamPage> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Padding(
-                                                  padding: const EdgeInsets.only(top: 30.0),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 30.0),
                                                   child: TextField(
                                                     onChanged: (value) {
                                                       setState(() {
                                                         _player = value;
                                                       });
                                                     },
-                                                      onSubmitted: (value) {
-                                                        if (_player == null ||
-                                                            _player == "") {
-                                                          return;
-                                                        }
-                                                        _databaseService
-                                                            .addPlayer(_player!);
-                                                        setState(() {
-                                                          _player = null;
-                                                        });
-                                                        Navigator.pop(
-                                                            this.context);
-                                                      },
+                                                    onSubmitted: (value) {
+                                                      if (_player == null ||
+                                                          _player == "") {
+                                                        return;
+                                                      }
+                                                      _databaseService
+                                                          .addPlayer(_player!);
+                                                      setState(() {
+                                                        _player = null;
+                                                      });
+                                                      Navigator.pop(
+                                                          this.context);
+                                                    },
                                                     decoration: InputDecoration(
                                                         border: OutlineInputBorder(
                                                             borderSide:
@@ -96,7 +98,9 @@ class _TeamPageState extends State<TeamPage> {
                                                   ),
                                                 ),
                                                 Padding(
-                                                  padding: const EdgeInsets.only(top: 50.0),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 50.0),
                                                   child: Row(
                                                     children: [
                                                       OutlinedButton(
@@ -115,32 +119,38 @@ class _TeamPageState extends State<TeamPage> {
                                                           child: const Text(
                                                             "Abbrechen",
                                                             style: TextStyle(
-                                                              color: Colors.black,
+                                                              color:
+                                                                  Colors.black,
                                                             ),
                                                           )),
                                                       Spacer(),
-                                                      SizedBox(width: 70.0,),
+                                                      SizedBox(
+                                                        width: 70.0,
+                                                      ),
                                                       Spacer(),
                                                       MaterialButton(
-                                                          color: Color.fromARGB(
-                                                              255, 21, 101, 181),
-                                                      onPressed: () {
-                                                        if (_player == null ||
-                                                            _player == "") {
-                                                          return;
-                                                        }
-                                                        _databaseService
-                                                            .addPlayer(_player!);
-                                                        setState(() {
-                                                          _player = null;
-                                                        });
-                                                        Navigator.pop(
-                                                            this.context);
-                                                      },
+                                                          color: Color
+                                                              .fromARGB(255, 21,
+                                                                  101, 181),
+                                                          onPressed: () {
+                                                            if (_player ==
+                                                                    null ||
+                                                                _player == "") {
+                                                              return;
+                                                            }
+                                                            _databaseService
+                                                                .addPlayer(
+                                                                    _player!);
+                                                            setState(() {
+                                                              _player = null;
+                                                            });
+                                                            Navigator.pop(
+                                                                this.context);
+                                                          },
                                                           shape: RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius.all(
-                                                                      Radius.circular(
+                                                              borderRadius: BorderRadius
+                                                                  .all(Radius
+                                                                      .circular(
                                                                           4.0))),
                                                           child: Padding(
                                                             padding:
@@ -153,8 +163,8 @@ class _TeamPageState extends State<TeamPage> {
                                                             child: const Text(
                                                               "Fertig",
                                                               style: TextStyle(
-                                                                color:
-                                                                    Colors.white,
+                                                                color: Colors
+                                                                    .white,
                                                               ),
                                                             ),
                                                           )),
@@ -296,6 +306,8 @@ class _TeamPageState extends State<TeamPage> {
                                                               .deleteTask(
                                                             player.id,
                                                           );
+                                                          Navigator.pop(
+                                                              this.context);
                                                           setState(() {});
                                                         },
                                                         shape: RoundedRectangleBorder(
