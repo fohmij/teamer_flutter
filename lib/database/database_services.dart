@@ -39,13 +39,11 @@ class DatabaseService {
 
   Future<int> getItemCount() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM items');
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM $_playersTableName');
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  void addPlayer(
-    String name,
-  ) async {
+  Future<void> addPlayer(String name,) async {
     final db = await database;
     int itemCount = await getItemCount();
     await db.insert(_playersTableName, {
