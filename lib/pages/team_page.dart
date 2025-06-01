@@ -121,7 +121,7 @@ class _TeamPageState extends State<TeamPage> {
                                                     child: Row(
                                                       children: [
                                                         SizedBox(
-                                                          width: 130,
+                                                          width: 135,
                                                           height: 40,
                                                           child: OutlinedButton(
                                                             onPressed: () {
@@ -140,7 +140,7 @@ class _TeamPageState extends State<TeamPage> {
                                                         Spacer(),
                                                         SizedBox(
                                                           height: 40,
-                                                          width: 130,
+                                                          width: 135,
                                                           child: TextButton(
                                                               onPressed: () {
                                                                 if (_player ==
@@ -277,7 +277,7 @@ class _TeamPageState extends State<TeamPage> {
                                                   children: [
                                                     SizedBox(
                                                       height: 40,
-                                                      width: 130,
+                                                      width: 135,
                                                       child: OutlinedButton(
                                                         onPressed: () {
                                                           Navigator.pop(
@@ -295,7 +295,7 @@ class _TeamPageState extends State<TeamPage> {
                                                     Spacer(),
                                                     SizedBox(
                                                       height: 40,
-                                                      width: 130,
+                                                      width: 135,
                                                       child: TextButton(
                                                         style: TextButton
                                                             .styleFrom(

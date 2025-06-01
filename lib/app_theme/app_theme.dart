@@ -19,6 +19,7 @@ class AppTheme {
   static const Color deleteRed = Color.fromARGB(255, 185, 88, 81);
 
   static final lightTheme = ThemeData(
+      brightness: Brightness.light,
       scaffoldBackgroundColor: backgroundColorLight,
       appBarTheme: const AppBarTheme(
         color: backgroundColorLight, // background AppBar
@@ -133,6 +134,7 @@ class AppTheme {
 ///////////////////////////////////////////////////////
 
   static final darkTheme = ThemeData(
+      brightness: Brightness.dark,
       scaffoldBackgroundColor: backgroundColorDark,
       appBarTheme: const AppBarTheme(
         color: backgroundColorDark,

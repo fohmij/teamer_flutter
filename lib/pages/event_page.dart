@@ -43,12 +43,10 @@ class _EventPageState extends State<EventPage> {
                 padding: const EdgeInsets.only(left: 48.0, right: 48.0),
                 child: Stack(
                   children: [
-                    Image(
-                        image: //Theme.of(context).brightness == Brightness.dark
-                            AssetImage(
-                                'assets/pictures/street_floorball_dark.png')),
-                            //: AssetImage(
-                             //   'assets/pictures/street_floorball_logo.png')),
+                    Image.asset(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 'assets/pictures/street_floorball_dark.png'
+                            : 'assets/pictures/street_floorball_logo.png'),
                     Positioned.fill(
                       child: TextButton(
                         onPressed: () {
