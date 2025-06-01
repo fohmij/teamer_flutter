@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/pages/team_page.dart';
 import 'package:teamer/pages/stats_page.dart';
 
@@ -29,64 +30,75 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Color.fromARGB(255, 243, 250, 236),
         appBar: AppBar(
-          title: Text(appBarTitle,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Roboto',
-              )),
-          backgroundColor: Color.fromARGB(255, 243, 250, 236),
-        ),
+            title: Text(
+          appBarTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        )),
         body: [
           TeamPage(),
           StatsPage(),
         ][currentPageIndex],
         extendBody: true,
-        bottomNavigationBar: Stack(children: <Widget>[
-          NavigationBarTheme(
-            data: NavigationBarThemeData(
-      labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
-        (Set<WidgetState> states) => states.contains(WidgetState.selected)
-            ? const TextStyle(color: Colors.white)
-            : const TextStyle(color: Colors.white),
-      ),
-    ),
-
-            child: NavigationBar(
-              destinations: [
-                NavigationDestination(
-                    icon: Icon(Icons.group_outlined, color: Colors.white,), label: "Team"),
-                NavigationDestination(
-                    icon: Icon(Icons.star_border, color: Colors.white,), label: "Stats")
-              ],
-              selectedIndex: currentPageIndex,
-              onDestinationSelected: (int index) {
-                setState(() {
-                  currentPageIndex = index;
-                  updateAppBarTitle();
-                });
-              },
-              backgroundColor: const Color.fromARGB(198, 38, 96, 171),
-              indicatorColor: const Color.fromARGB(255, 30, 89, 148),
+        bottomNavigationBar: Stack(
+          children: <Widget>[
+            Container(
+              color: Colors.transparent,
+              child: NavigationBar(
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.group_outlined,
+                      color:
+                          currentPageIndex == 0 ? Colors.white : AppTheme.grey800,
+                    ),
+                    label: "Team",
+                    selectedIcon: Icon(
+                      Icons.group_outlined,
+                      color: Colors.white,
+                    ),
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.star_border,
+                      color:
+                          currentPageIndex == 1 ? Colors.white : AppTheme.grey800,
+                    ),
+                    label: "Stats",
+                    selectedIcon: Icon(
+                      Icons.star_border,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+                selectedIndex: currentPageIndex,
+                onDestinationSelected: (int index) {
+                  setState(() {
+                    currentPageIndex = index;
+                    updateAppBarTitle();
+                  });
+                },
+              ),
             ),
-          ),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-            SizedBox(
-              height: 75,
+            Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  'Teamer',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 21,
+                    color: 
+                    Theme.of(context).brightness == Brightness.dark ? AppTheme.grey300 : AppTheme.grey600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
             ),
-            Text(
-              'Teamer',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 21,
-                  color: Colors.grey[300],
-                  fontStyle: FontStyle.italic),
-            ),
-          ]),
-        ]));
+          ],
+        ));
   }
 }

@@ -12,16 +12,11 @@ class _EventPageState extends State<EventPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color.fromARGB(255, 243, 250, 236),
       appBar: AppBar(
-        title: Text('Street-Floorball 2025',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Roboto',
-            )),
-        backgroundColor: Color.fromARGB(255, 243, 250, 236),
+        title: Text(
+          'Street-Floorball 2025',
+        ),
+        titleTextStyle: Theme.of(context).textTheme.titleLarge,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -49,8 +44,11 @@ class _EventPageState extends State<EventPage> {
                 child: Stack(
                   children: [
                     Image(
-                        image: AssetImage(
-                            'assets/pictures/street_floorball_logo.png')),
+                        image: //Theme.of(context).brightness == Brightness.dark
+                            AssetImage(
+                                'assets/pictures/street_floorball_dark.png')),
+                            //: AssetImage(
+                             //   'assets/pictures/street_floorball_logo.png')),
                     Positioned.fill(
                       child: TextButton(
                         onPressed: () {
@@ -58,13 +56,8 @@ class _EventPageState extends State<EventPage> {
                             Uri.https("street.floorball.de"),
                           );
                         },
-                        style: ButtonStyle(
-                          shape: WidgetStateProperty.all<OutlinedBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
-                            ),
-                          ),
-                        ),
+                        style: TextButton.styleFrom(
+                            backgroundColor: Colors.transparent),
                         child: SizedBox
                             .shrink(), // Der Button ist unsichtbar, aber noch klickbar
                       ),

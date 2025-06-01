@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:teamer/pages/home_page.dart';
 import 'package:teamer/pages/event_page.dart';
 
+import 'package:teamer/app_theme/app_theme.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // make navigation bar transparent
@@ -27,11 +29,8 @@ class MyApp extends StatelessWidget {
         routes: {
           '/eventpage': (context) => EventPage(),
         },
-        theme: ThemeData(
-          iconTheme: IconThemeData(
-            color: Colors.white,
-          )
-        ),
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
       );
   }
 }

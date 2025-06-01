@@ -52,7 +52,7 @@ class _StatsPageState extends State<StatsPage> {
             height: 300,
             width: 400,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(10),
               child: Image.asset('assets/pictures/Street_Floorball.jpg',
                   fit: BoxFit.cover),
             ),
@@ -72,12 +72,8 @@ class _StatsPageState extends State<StatsPage> {
               onPressed: () {
                 Navigator.pushNamed(context, '/eventpage');
               },
-              style: ButtonStyle(
-                shape: WidgetStateProperty.all<OutlinedBorder>(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                ),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.transparent,
               ),
               child: SizedBox
                   .shrink(), // Der Button ist unsichtbar, aber noch klickbar
@@ -93,8 +89,8 @@ class _StatsPageState extends State<StatsPage> {
       child: SizedBox(
         height: 120,
         child: Card(
+          color: Theme.of(context).cardColor,
           elevation: 1,
-          color: const Color.fromARGB(255, 205, 225, 235),
           child: Stack(children: <Widget>[
             Padding(
               padding: const EdgeInsets.only(top: 15, left: 15),
@@ -113,7 +109,6 @@ class _StatsPageState extends State<StatsPage> {
                 children: [
                   Icon(
                     icon,
-                    color: Colors.black,
                     size: 30,
                   ),
                 ],

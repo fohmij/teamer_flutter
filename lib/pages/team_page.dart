@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:teamer/database/database_services.dart';
+import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/utils/players_list.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../database/player.dart';
@@ -14,8 +15,6 @@ class TeamPage extends StatefulWidget {
 class _TeamPageState extends State<TeamPage> {
   final DatabaseService _databaseService = DatabaseService.instance;
 
-  final _controller = TextEditingController();
-
   final FocusNode _focusNode =
       FocusNode(); // um die Tastatur beim Spielererstellen direkt zu öffnen
 
@@ -24,7 +23,6 @@ class _TeamPageState extends State<TeamPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color.fromARGB(255, 243, 250, 236),
       body: FutureBuilder(
           future: _databaseService.getTasks(),
           builder: (context, snapshot) {
@@ -33,11 +31,18 @@ class _TeamPageState extends State<TeamPage> {
                 // itemCount: snapshot.data?.length ?? 0,
                 separatorBuilder: (context, index) {
                   return Divider(
-                    color: const Color.fromARGB(255, 230, 230, 230),
                     thickness: 1,
                     height: 1,
                   );
                 },
+                /*
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      Spieler hinzufügen
+      */
                 itemBuilder: (context, index) {
                   if (index == (snapshot.data?.length ?? 0)) {
                     return Row(
@@ -45,11 +50,14 @@ class _TeamPageState extends State<TeamPage> {
                         Spacer(),
                         Icon(
                           Icons.add,
-                          color: Colors.grey[500],
+                          color: AppTheme.grey600,
                         ),
                         Padding(
                           padding: const EdgeInsets.only(right: 24.0),
                           child: TextButton(
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                              ),
                               onPressed: () {
                                 showDialog(
                                     context: this.context,
@@ -57,130 +65,118 @@ class _TeamPageState extends State<TeamPage> {
                                           shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.all(
                                                   Radius.circular(8.0))),
-                                          backgroundColor: Color.fromARGB(
-                                              255, 243, 250, 236),
-                                          title: Text('Neuer Spieler'),
-                                          content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          top: 30.0),
-                                                  child: TextField(
-                                                    onChanged: (value) {
-                                                      setState(() {
-                                                        _player = value;
-                                                      });
-                                                    },
-                                                    onSubmitted: (value) {
-                                                      if (_player == null ||
-                                                          _player == "") {
-                                                        return;
-                                                      }
-                                                      _databaseService
-                                                          .addPlayer(_player!);
-                                                      setState(() {
-                                                        _player = null;
-                                                      });
-                                                      Navigator.pop(
-                                                          this.context);
-                                                    },
-                                                    decoration: InputDecoration(
+                                          title: Text('Neuer Spieler',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .displayLarge),
+                                          content: SizedBox(
+                                            width: 560,
+                                            child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 30.0),
+                                                    child: TextField(
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodyMedium,
+                                                      onChanged: (value) {
+                                                        setState(() {
+                                                          _player = value;
+                                                        });
+                                                      },
+                                                      onSubmitted: (value) {
+                                                        if (_player == null ||
+                                                            _player == "") {
+                                                          return;
+                                                        }
+                                                        _databaseService
+                                                            .addPlayer(
+                                                                _player!);
+                                                        setState(() {
+                                                          _player = null;
+                                                        });
+                                                        Navigator.pop(
+                                                            this.context);
+                                                      },
+                                                      decoration:
+                                                          InputDecoration(
                                                         border: OutlineInputBorder(
                                                             borderSide:
                                                                 BorderSide(
                                                                     color: Colors
                                                                         .grey)),
-                                                        hintText: 'Name...'),
-                                                    focusNode: _focusNode,
-                                                    autofocus: true,
-                                                  ),
-                                                ),
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          top: 50.0),
-                                                  child: Row(
-                                                    children: [
-                                                      OutlinedButton(
-                                                          style: OutlinedButton
-                                                              .styleFrom(
-                                                            shape: RoundedRectangleBorder(
-                                                                borderRadius: BorderRadius
-                                                                    .all(Radius
-                                                                        .circular(
-                                                                            4.0))),
-                                                          ),
-                                                          onPressed: () {
-                                                            Navigator.pop(
-                                                                context);
-                                                          },
-                                                          child: const Text(
-                                                            "Abbrechen",
-                                                            style: TextStyle(
-                                                              color:
-                                                                  Colors.black,
-                                                            ),
-                                                          )),
-                                                      Spacer(),
-                                                      SizedBox(
-                                                        width: 70.0,
+                                                        hintText: 'Name...',
                                                       ),
-                                                      Spacer(),
-                                                      MaterialButton(
-                                                          color: Color
-                                                              .fromARGB(255, 21,
-                                                                  101, 181),
-                                                          onPressed: () {
-                                                            if (_player ==
-                                                                    null ||
-                                                                _player == "") {
-                                                              return;
-                                                            }
-                                                            _databaseService
-                                                                .addPlayer(
-                                                                    _player!);
-                                                            setState(() {
-                                                              _player = null;
-                                                            });
-                                                            Navigator.pop(
-                                                                this.context);
-                                                          },
-                                                          shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius
-                                                                  .all(Radius
-                                                                      .circular(
-                                                                          4.0))),
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    vertical:
-                                                                        12.0,
-                                                                    horizontal:
-                                                                        16.0),
-                                                            child: const Text(
-                                                              "Fertig",
-                                                              style: TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                              ),
-                                                            ),
-                                                          )),
-                                                    ],
+                                                      focusNode: _focusNode,
+                                                      autofocus: true,
+                                                    ),
                                                   ),
-                                                ),
-                                              ]),
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 50.0),
+                                                    child: Row(
+                                                      children: [
+                                                        SizedBox(
+                                                          width: 130,
+                                                          height: 40,
+                                                          child: OutlinedButton(
+                                                            onPressed: () {
+                                                              Navigator.pop(
+                                                                  context);
+                                                            },
+                                                            child: Text(
+                                                              "Abbrechen",
+                                                              style: Theme.of(
+                                                                      context)
+                                                                  .textTheme
+                                                                  .labelSmall,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Spacer(),
+                                                        SizedBox(
+                                                          height: 40,
+                                                          width: 130,
+                                                          child: TextButton(
+                                                              onPressed: () {
+                                                                if (_player ==
+                                                                        null ||
+                                                                    _player ==
+                                                                        "") {
+                                                                  return;
+                                                                }
+                                                                _databaseService
+                                                                    .addPlayer(
+                                                                        _player!);
+                                                                setState(() {
+                                                                  _player =
+                                                                      null;
+                                                                });
+                                                                Navigator.pop(
+                                                                    this.context);
+                                                              },
+                                                              child: Text(
+                                                                "Fertig",
+                                                                style: Theme.of(
+                                                                        context)
+                                                                    .textTheme
+                                                                    .displaySmall,
+                                                              )),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ]),
+                                          ),
                                         ));
                               },
                               child: Text(
                                 "Neuer Spieler",
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 20.0,
-                                  fontWeight: FontWeight.w400,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium,
                               )),
                         ),
                       ],
@@ -195,19 +191,25 @@ class _TeamPageState extends State<TeamPage> {
                           ),
                         ),
                       ),
+                      /*
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      Spieler löschen
+      */
                       child: Slidable(
                         startActionPane: ActionPane(
                           extentRatio: 0.2,
                           motion: StretchMotion(),
                           children: [
                             SlidableAction(
-                              backgroundColor: Color.fromARGB(255, 185, 88, 81),
+                              backgroundColor: AppTheme.deleteRed,
                               onPressed: (_) {
                                 showDialog(
                                     context: this.context,
                                     builder: (_) => AlertDialog(
-                                          backgroundColor: Color.fromARGB(
-                                              255, 243, 250, 236),
                                           shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.all(
                                                   Radius.circular(8.0))),
@@ -230,8 +232,6 @@ class _TeamPageState extends State<TeamPage> {
                                                         child: Icon(
                                                           Icons.delete,
                                                           size: 25.0,
-                                                          color:
-                                                              Colors.grey[800],
                                                         ),
                                                       ),
                                                       Padding(
@@ -241,12 +241,10 @@ class _TeamPageState extends State<TeamPage> {
                                                                 left: 8.0),
                                                         child: Text(
                                                           'Löschen',
-                                                          style: TextStyle(
-                                                            color: Colors.black,
-                                                            fontSize: 20.0,
-                                                            fontWeight:
-                                                                FontWeight.w500,
-                                                          ),
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .displayLarge,
                                                         ),
                                                       )
                                                     ],
@@ -264,10 +262,9 @@ class _TeamPageState extends State<TeamPage> {
                                                       vertical: 30.0),
                                                   child: Text(
                                                     'Soll der Spieler wirklich dauerhaft gelöscht werden?',
-                                                    style: TextStyle(
-                                                      color: Colors.black,
-                                                      fontSize: 20.0,
-                                                    ),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium,
                                                   ),
                                                 ),
                                                 Padding(
@@ -278,29 +275,34 @@ class _TeamPageState extends State<TeamPage> {
                                                 ),
                                                 Row(
                                                   children: [
-                                                    OutlinedButton(
-                                                        style: OutlinedButton
-                                                            .styleFrom(
-                                                          shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius
-                                                                  .all(Radius
-                                                                      .circular(
-                                                                          4.0))),
-                                                        ),
+                                                    SizedBox(
+                                                      height: 40,
+                                                      width: 130,
+                                                      child: OutlinedButton(
                                                         onPressed: () {
                                                           Navigator.pop(
                                                               context);
                                                         },
-                                                        child: const Text(
+                                                        child: Text(
                                                           "Abbrechen",
-                                                          style: TextStyle(
-                                                            color: Colors.black,
-                                                          ),
-                                                        )),
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .labelSmall,
+                                                        ),
+                                                      ),
+                                                    ),
                                                     Spacer(),
-                                                    MaterialButton(
-                                                        color: Color.fromARGB(
-                                                            255, 185, 88, 81),
+                                                    SizedBox(
+                                                      height: 40,
+                                                      width: 130,
+                                                      child: TextButton(
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              AppTheme
+                                                                  .deleteRed,
+                                                        ),
                                                         onPressed: () {
                                                           _databaseService
                                                               .deleteTask(
@@ -310,27 +312,15 @@ class _TeamPageState extends State<TeamPage> {
                                                               this.context);
                                                           setState(() {});
                                                         },
-                                                        shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.all(
-                                                                    Radius.circular(
-                                                                        4.0))),
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  vertical:
-                                                                      12.0,
-                                                                  horizontal:
-                                                                      16.0),
-                                                          child: const Text(
-                                                            "Löschen",
-                                                            style: TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                            ),
-                                                          ),
-                                                        )),
+                                                        child: Text(
+                                                          "Löschen",
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .displaySmall,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ],
                                                 )
                                               ]),
@@ -344,8 +334,8 @@ class _TeamPageState extends State<TeamPage> {
                         ),
                         child: ListTile(
                           tileColor: player.status == 0
-                              ? Color.fromARGB(255, 243, 250, 236)
-                              : const Color.fromARGB(255, 139, 204, 101),
+                              ? Theme.of(context).scaffoldBackgroundColor
+                              : AppTheme.playerSelected,
                           onTap: () {
                             int newStatus = player.status == 1 ? 0 : 1;
                             _databaseService.updateTaskStatus(
@@ -358,10 +348,7 @@ class _TeamPageState extends State<TeamPage> {
                             padding: const EdgeInsets.only(left: 14.0),
                             child: Text(
                               player.name,
-                              style: TextStyle(
-                                fontSize: 20,
-                                // fontWeight: player.status == 1 ? FontWeight.bold : FontWeight.normal
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
                           trailing: Checkbox(
@@ -381,6 +368,14 @@ class _TeamPageState extends State<TeamPage> {
                   }
                 });
           }),
+      /*
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      #######################################################################################
+      Floating Action Button
+      */
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -388,8 +383,6 @@ class _TeamPageState extends State<TeamPage> {
             width: 65,
             height: 65,
             child: FloatingActionButton(
-              foregroundColor: const Color.fromARGB(255, 255, 255, 255),
-              backgroundColor: const Color.fromARGB(255, 21, 101, 181),
               onPressed: null,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
