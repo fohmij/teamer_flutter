@@ -16,6 +16,7 @@ dependencies:
   provider: ^6.0.0
   flutter_slidable: ^3.1.2
   url_launcher: ^6.1.8
+  syncfusion_flutter_pdfviewer: ^24.1.41
 
 
 # Database
@@ -47,3 +48,5 @@ flutter:
     - assets/pictures/Street_Floorball.jpg
     - assets/pictures/street_floorball_logo.png
     - assets/pictures/street_floorball_dark.png
+    - assets/pictures/coaching.jpeg
+    - assets/pdfs/schulregelwerk.pdf

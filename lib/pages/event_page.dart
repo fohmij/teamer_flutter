@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:teamer/app_theme/app_theme.dart';
 
 class EventPage extends StatefulWidget {
   EventPage({super.key});
@@ -17,6 +18,9 @@ class _EventPageState extends State<EventPage> {
           'Street-Floorball 2025',
         ),
         titleTextStyle: Theme.of(context).textTheme.titleLarge,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.navigationBarDark
+            : AppTheme.navigationBarLight,
       ),
       body: SingleChildScrollView(
         child: Padding(

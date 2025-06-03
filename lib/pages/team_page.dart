@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:teamer/database/database_services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
-import 'package:teamer/utils/players_list.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../database/player.dart';
 

@@ -10,35 +10,98 @@ class StatsPage extends StatefulWidget {
 class _StatsPageState extends State<StatsPage> {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
+    return Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               eventCard(),
-              Padding(
-                padding: const EdgeInsets.only(top: 20.0),
+              //padding: const EdgeInsets.only(top: 20.0),
+              SizedBox(
+                height: 20,
+              ),
+              SizedBox(
+                width: double.infinity,
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    statsCard("Beste \nSpieler", Icons.sports_hockey),
+                    Expanded(
+                        child: SizedBox(
+                      height: 120,
+                      child: statsCard("Beste \nSpieler", Icons.sports_hockey),
+                    )),
                     SizedBox(
                       width: 20,
                     ),
-                    statsCard("Alle \nStatitiken", Icons.equalizer),
+                    Expanded(
+                        child: SizedBox(
+                      height: 120,
+                      child: statsCard("Alle \nStats", Icons.equalizer),
+                    )),
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: 20.0),
-                child: Row(
-                  children: [statsCard("Alle \nSpiele", Icons.access_time)],
-                ),
+              SizedBox(
+                height: 20,
+              ),
+              SizedBox(
+                height: 120,
+                width: double.infinity,
+                child: statsCard("Alle \nSpiele", Icons.access_time),
+              ),
+              SizedBox(
+                height: 20,
+              ),
+              SizedBox(
+                height: 120,
+                width: double.infinity,
+                child: statsCard("Coaching- \nZone", Icons.star,
+                    page: '/coachingzonepage'),
               )
+            ])));
+  }
+
+  Card statsCard(String label, IconData icon, {String page = '/eventpage'}) {
+    return Card(
+      color: Theme.of(context).cardColor,
+      elevation: 1,
+      child: Stack(children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(top: 15, left: 15),
+          child: Text(
+            label,
+            style: TextStyle(
+                height: 1.1, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        Positioned(
+          bottom: 16,
+          right: 20,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Icon(
+                icon,
+                size: 30,
+              ),
             ],
           ),
+        ),
+        Positioned.fill(
+          child: TextButton(
+            onPressed: () {
+              Navigator.pushNamed(context, page);
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.transparent,
+            ),
+            child: SizedBox
+                .shrink(), // Der Button ist unsichtbar, aber noch klickbar
+          ),
         )
-      ],
+      ]),
     );
   }
 
@@ -80,42 +143,6 @@ class _StatsPageState extends State<StatsPage> {
             ),
           )
         ]),
-      ),
-    );
-  }
-
-  Expanded statsCard(String label, IconData icon) {
-    return Expanded(
-      child: SizedBox(
-        height: 120,
-        child: Card(
-          color: Theme.of(context).cardColor,
-          elevation: 1,
-          child: Stack(children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(top: 15, left: 15),
-              child: Text(
-                label,
-                style: TextStyle(
-                    height: 1.1, fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              bottom: 16,
-              right: 20,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Icon(
-                    icon,
-                    size: 30,
-                  ),
-                ],
-              ),
-            )
-          ]),
-        ),
       ),
     );
   }
