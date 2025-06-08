@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:teamer/app_theme/app_theme.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class CoachingZonePage extends StatefulWidget {
   CoachingZonePage({super.key});
@@ -63,10 +64,37 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                     height: 20,
                   ),
                   SizedBox(
+                    width: double.infinity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                            child: SizedBox(
+                          height: 120,
+                          child: linkCard("HSZ Floorball\nSeite", Icons.school,
+                              link:
+                                  "https://hochschulsport.rwth-aachen.de/cms/HSZ/sport/Sportartensuche/~hqawy/Floorball/"),
+                        )),
+                        SizedBox(
+                          width: 20,
+                        ),
+                        Expanded(
+                            child: SizedBox(
+                          height: 120,
+                          child:
+                              dialogCard("Gruppen- \nLink", MdiIcons.whatsapp),
+                        )),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 20,
+                  ),
+                  SizedBox(
                     height: 120,
                     width: double.infinity,
-                  child: statsCard("Schul-\nRegelwerk", Icons.sports,
-                      page: '/rules'),
+                    child: statsCard("Schul-\nRegelwerk", Icons.sports,
+                        page: '/rules'),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(left: 48.0, right: 48.0),
@@ -172,6 +200,68 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
               launchUrl(
                 Uri.parse(link),
               );
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.transparent,
+            ),
+            child: SizedBox
+                .shrink(), // Der Button ist unsichtbar, aber noch klickbar
+          ),
+        )
+      ]),
+    );
+  }
+
+  Card dialogCard(String label, IconData icon, {String page = '/eventpage'}) {
+    return Card(
+      color: Theme.of(context).cardColor,
+      elevation: 1,
+      child: Stack(children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(top: 15, left: 15),
+          child: Text(
+            label,
+            style: TextStyle(
+                height: 1.1, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        Positioned(
+          bottom: 16,
+          right: 20,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Icon(
+                icon,
+                size: 30,
+              ),
+            ],
+          ),
+        ),
+        Positioned.fill(
+          child: TextButton(
+            onPressed: () {
+              showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    backgroundColor: 
+                            Theme.of(context).brightness == Brightness.dark
+                                ? Colors.black
+                                : Color.fromARGB(255, 247, 248, 250),
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(16.0))),
+                        content: SizedBox(
+                          width: 560,
+                          child: Image(
+                              image:
+                                  AssetImage(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 'assets/pictures/QR_Code_black.jpg'
+                                : 'assets/pictures/QR_Code_white.jpg'))
+                        ),
+                      ));
             },
             style: TextButton.styleFrom(
               backgroundColor: Colors.transparent,

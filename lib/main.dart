@@ -4,6 +4,7 @@ import 'package:teamer/pages/coaching_zone_page.dart';
 import 'package:teamer/pages/home_page.dart';
 import 'package:teamer/pages/event_page.dart';
 import 'package:teamer/pages/rules_page.dart';
+import 'package:teamer/pages/team_page.dart';
 
 import 'package:teamer/app_theme/app_theme.dart';
 
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
           '/eventpage': (context) => EventPage(),
           '/coachingzonepage': (context) => CoachingZonePage(),
           '/rules': (context) => RulesPage(),
+          '/team': (context) => TeamPage(),
         },
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

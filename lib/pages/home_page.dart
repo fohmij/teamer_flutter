@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:teamer/app_theme/app_theme.dart';
-import 'package:teamer/pages/team_page.dart';
+import 'package:teamer/pages/team_select_page.dart';
 import 'package:teamer/pages/stats_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -36,7 +36,7 @@ class _HomePageState extends State<HomePage> {
           style: Theme.of(context).textTheme.titleLarge,
         )),
         body: [
-          TeamPage(),
+          TeamSelectPage(),
           StatsPage(),
         ][currentPageIndex],
         extendBody: true,

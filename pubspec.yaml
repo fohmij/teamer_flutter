@@ -17,6 +17,7 @@ dependencies:
   flutter_slidable: ^3.1.2
   url_launcher: ^6.1.8
   syncfusion_flutter_pdfviewer: ^24.1.41
+  material_design_icons_flutter: ^7.0.7296
 
 
 # Database
@@ -43,10 +44,12 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/icon/icon.png
     - assets/pictures/spotzentrum_am_hubland_wuerzburg_ai.png
     - assets/pictures/Street_Floorball.jpg
     - assets/pictures/street_floorball_logo.png
     - assets/pictures/street_floorball_dark.png
     - assets/pictures/coaching.jpeg
+    - assets/pictures/QR_Code_white.jpg
+    - assets/pictures/QR_Code_black.jpg
+    - assets/icon/icon.png
     - assets/pdfs/schulregelwerk.pdf
