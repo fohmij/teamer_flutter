@@ -405,5 +405,3 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     );
   }
 }
-
-

@@ -18,6 +18,9 @@ class AppTheme {
   static const Color tertiaryBlue = Color.fromARGB(255, 3, 64, 95);
   static const Color deleteRed = Color.fromARGB(255, 185, 88, 81);
 
+  static const Color textFieldGreen = Color.fromARGB(255, 122, 236, 167);
+  static const Color textFieldRed = Color.fromARGB(255, 250, 176, 176);
+
   static final lightTheme = ThemeData(
       brightness: Brightness.light,
       scaffoldBackgroundColor: backgroundColorLight,
@@ -33,6 +36,11 @@ class AppTheme {
           fontSize: 26,
           fontWeight: FontWeight.bold,
           fontFamily: 'Roboto',
+        ),
+        bodyLarge: TextStyle(
+          color: Colors.black,
+          fontSize: 20.0,
+          fontWeight: FontWeight.bold,
         ),
         bodyMedium: TextStyle(
           color: Colors.black,
@@ -148,6 +156,11 @@ class AppTheme {
           fontSize: 26,
           fontWeight: FontWeight.bold,
           fontFamily: 'Roboto',
+        ),
+        bodyLarge: TextStyle(
+          color: Colors.white,
+          fontSize: 20.0,
+          fontWeight: FontWeight.bold,
         ),
         bodyMedium: TextStyle(
           color: Colors.white,
