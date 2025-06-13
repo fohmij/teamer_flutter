@@ -61,7 +61,10 @@ class DatabaseService {
 
   Future<List<Player>> getPlayers() async {
     final db = await database;
-    final data = await db.query(_playersTableName);
+    final data = await db.query(
+      _playersTableName,
+      orderBy: '$_playersNameColumnName COLLATE NOCASE',
+    );
     List<Player> players = data
         .map((e) => Player(
             id: e["id"] as int,
@@ -112,7 +115,7 @@ class DatabaseService {
     });
   }
 
-  void deletePlayer(int id) async {
+  Future<void> deletePlayer(int id) async {
     final db = await database;
     await db.delete(_playersTableName, where: 'id = ?', whereArgs: [
       id,

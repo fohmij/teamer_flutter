@@ -19,11 +19,19 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
 
   String? _player;
 
+  late Future<List<Player>> _playersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _playersFuture = _databaseService.getPlayers();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder(
-          future: _databaseService.getPlayers(),
+          future: _playersFuture,
           builder: (context, snapshot) {
             return ListView.separated(
                 itemCount: (snapshot.data?.length ?? 0) + 1,
@@ -95,7 +103,8 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                                                                 _player!);
                                                         setState(() {
                                                           _player = null;
-                                                          _databaseService
+                                                          _playersFuture = 
+                                                            _databaseService
                                                               .getPlayers();
                                                         });
                                                         Navigator.pop(
@@ -151,13 +160,19 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                                                                 }
                                                                 _databaseService
                                                                     .addPlayer(
-                                                                        _player!);
-                                                                setState(() {
-                                                                  _player =
-                                                                      null;
+                                                                        _player!)
+                                                                    .then((_) {
+                                                                  setState(() {
+                                                                    _player =
+                                                                        null;
+                                                                    _playersFuture =
+                                                                        _databaseService
+                                                                            .getPlayers(); // 🔁 wichtig
+                                                                  });
+                                                                  Navigator.pop(
+                                                                      // ignore: use_build_context_synchronously
+                                                                      this.context);
                                                                 });
-                                                                Navigator.pop(
-                                                                    this.context);
                                                               },
                                                               child: Text(
                                                                 "Fertig",
@@ -307,10 +322,15 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                                                           _databaseService
                                                               .deletePlayer(
                                                             player.id,
-                                                          );
+                                                          ).then((_) {
+                                                            setState(() {
+                                                              _playersFuture = 
+                                                                _databaseService 
+                                                                  .getPlayers();
+                                                            });
+                                                          });
                                                           Navigator.pop(
                                                               this.context);
-                                                          setState(() {});
                                                         },
                                                         child: Text(
                                                           "Löschen",
@@ -341,8 +361,13 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                             _databaseService.updatePlayerStatus(
                               player.id,
                               newStatus,
-                            );
-                            setState(() {});
+                            ).then((_){
+                              setState(() {
+                                _playersFuture = 
+                                  _databaseService
+                                    .getPlayers();
+                              });
+                            });
                           },
                           title: Padding(
                             padding: const EdgeInsets.only(left: 14.0),
@@ -358,8 +383,13 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                               _databaseService.updatePlayerStatus(
                                 player.id,
                                 value == true ? 1 : 0,
-                              );
-                              setState(() {});
+                              ).then((_) {
+                                setState(() {
+                                  _playersFuture = 
+                                    _databaseService
+                                      .getPlayers();
+                                });
+                              });
                             },
                           ),
                         ),
