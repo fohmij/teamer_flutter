@@ -16,10 +16,10 @@ class PlayersList extends StatefulWidget {
   final Function(BuildContext)? deleteFunction;
 
   @override
-  _PlayersListState createState() => _PlayersListState();
+  PlayersListState createState() => PlayersListState();
 }
 
-class _PlayersListState extends State<PlayersList> {
+class PlayersListState extends State<PlayersList> {
   late bool playerSelected;
 
   @override

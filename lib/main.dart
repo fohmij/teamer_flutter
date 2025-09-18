@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:teamer/pages/coaching_zone_page.dart';
+import 'package:teamer/pages/exercises_page.dart';
 import 'package:teamer/pages/home_page.dart';
 import 'package:teamer/pages/event_page.dart';
 import 'package:teamer/pages/rules_page.dart';
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
           '/eventpage': (context) => EventPage(),
           '/coachingzonepage': (context) => CoachingZonePage(),
           '/rules': (context) => RulesPage(),
+          '/exercises': (context) => ExercisesPage(),
           '/team': (context) => TeamPage(),
         },
         theme: AppTheme.lightTheme,
