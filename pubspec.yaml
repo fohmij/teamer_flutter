@@ -1,12 +1,11 @@
 name: teamer
-description: A new Flutter project.
-
+description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 0.0.1+1
+version: 1.0.0+1
 
 environment:
-  sdk: ^3.1.1
+  sdk: ^3.9.2
 
 dependencies:
   flutter:
@@ -16,20 +15,19 @@ dependencies:
   provider: ^6.0.0
   flutter_slidable: ^3.1.2
   url_launcher: ^6.1.8
-  syncfusion_flutter_pdfviewer: ^24.1.41
+  flutter_pdfview: ^1.4.0
   material_design_icons_flutter: ^7.0.7296
 
-
-# Database
   cupertino_icons: ^1.0.8
   sqflite: ^2.3.3
   path: ^1.9.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^2.0.0
+  flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.3
 
 flutter_launcher_icons:
@@ -42,6 +40,7 @@ flutter_launcher_icons:
   min_sdk_android: 21
 
 flutter:
+
   uses-material-design: true
   assets:
     - assets/pictures/spotzentrum_am_hubland_wuerzburg_ai.png

@@ -4,7 +4,7 @@ import 'package:teamer/app_theme/app_theme.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class CoachingZonePage extends StatefulWidget {
-  CoachingZonePage({super.key});
+  const CoachingZonePage({super.key});
 
   @override
   State<CoachingZonePage> createState() => _CoachingZonePageState();
@@ -43,7 +43,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                             child: SizedBox(
                           height: 120,
                           child: linkCard(
-                              "Sportreferat\nAachen", Icons.diversity_3,
+                              "Sportreferat\nAachen", Icons.diversity_3, Colors.yellow,
                               link: "https://www.sr.rwth-aachen.de/"),
                         )),
                         SizedBox(
@@ -53,7 +53,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                             child: SizedBox(
                           height: 120,
                           child: linkCard(
-                              "Self- \nService", Icons.assignment_turned_in,
+                              "Self- \nService", Icons.assignment_turned_in, const Color.fromARGB(255, 255, 252, 200),
                               link:
                                   "https://buchung.hsz.rwth-aachen.de/cgi/self-service.cgi?klident=6307480c0736773ba7859a8710564fab&klcode=64c3c292e987d13c0766a19d649d4bb4c0596d15"),
                         )),
@@ -71,7 +71,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                         Expanded(
                             child: SizedBox(
                           height: 120,
-                          child: linkCard("HSZ Floorball\nSeite", Icons.school,
+                          child: linkCard("HSZ Floorball\nSeite", Icons.school, Colors.blue,
                               link:
                                   "https://hochschulsport.rwth-aachen.de/cms/HSZ/sport/Sportartensuche/~hqawy/Floorball/"),
                         )),
@@ -82,7 +82,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                             child: SizedBox(
                           height: 120,
                           child:
-                              dialogCard("Gruppen- \nLink", MdiIcons.whatsapp),
+                              dialogCard("Gruppen- \nLink", MdiIcons.whatsapp, const Color.fromARGB(255, 90, 207, 94)),
                         )),
                       ],
                     ),
@@ -166,10 +166,10 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
     );
   }
 
-  Card linkCard(String label, IconData icon,
+  Card linkCard(String label, IconData icon, Color linkCardColor,
       {String link = "street.floorball.de"}) {
     return Card(
-      color: Theme.of(context).cardColor,
+      color: linkCardColor,
       elevation: 1,
       child: Stack(children: <Widget>[
         Padding(
@@ -212,9 +212,9 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
     );
   }
 
-  Card dialogCard(String label, IconData icon, {String page = '/eventpage'}) {
+  Card dialogCard(String label, IconData icon, Color dialogCardColor ,{String page = '/eventpage'}) {
     return Card(
-      color: Theme.of(context).cardColor,
+      color: dialogCardColor,
       elevation: 1,
       child: Stack(children: <Widget>[
         Padding(

@@ -5,7 +5,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../database/player.dart';
 
 class TeamSelectPage extends StatefulWidget {
-  TeamSelectPage({super.key});
+  const TeamSelectPage({super.key});
 
   @override
   State<TeamSelectPage> createState() => _TeamSelectPageState();

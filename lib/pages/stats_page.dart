@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class StatsPage extends StatefulWidget {
-  StatsPage({super.key});
+  const StatsPage({super.key});
 
   @override
   State<StatsPage> createState() => _StatsPageState();
@@ -56,15 +56,15 @@ class _StatsPageState extends State<StatsPage> {
               SizedBox(
                 height: 120,
                 width: double.infinity,
-                child: statsCard("Coaching- \nZone", Icons.star,
+                child: statsCardColord("Coaching- \nZone", Icons.star, const Color.fromARGB(255, 221, 2, 56),
                     page: '/coachingzonepage'),
               )
             ])));
   }
 
-  Card statsCard(String label, IconData icon, {String page = '/eventpage'}) {
+  Card statsCard(String label, IconData icon, {Color? statsCardColor, String page = '/eventpage'}) {
     return Card(
-      color: Theme.of(context).cardColor,
+      color: statsCardColor ?? Theme.of(context).cardColor,
       elevation: 1,
       child: Stack(children: <Widget>[
         Padding(
@@ -85,6 +85,50 @@ class _StatsPageState extends State<StatsPage> {
               Icon(
                 icon,
                 size: 30,
+              ),
+            ],
+          ),
+        ),
+        Positioned.fill(
+          child: TextButton(
+            onPressed: () {
+              Navigator.pushNamed(context, page);
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.transparent,
+            ),
+            child: SizedBox
+                .shrink(), // Der Button ist unsichtbar, aber noch klickbar
+          ),
+        )
+      ]),
+    );
+  }
+
+  Card statsCardColord(String label, IconData icon, Color statsCardColor, {String page = '/eventpage'}) {
+    return Card(
+      color: statsCardColor ,
+      elevation: 1,
+      child: Stack(children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(top: 15, left: 15),
+          child: Text(
+            label,
+            style: TextStyle(
+                height: 1.1, fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+        Positioned(
+          bottom: 16,
+          right: 20,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Icon(
+                icon,
+                size: 30,
+                color: Colors.white,
               ),
             ],
           ),

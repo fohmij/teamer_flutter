@@ -4,7 +4,7 @@ import '../database/player.dart';
 import 'package:teamer/database/database_services.dart';
 
 class TeamPage extends StatefulWidget {
-  TeamPage({super.key});
+  const TeamPage({super.key});
 
   @override
   State<TeamPage> createState() => _TeamPageState();

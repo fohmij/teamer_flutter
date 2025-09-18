@@ -3,7 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 
 class EventPage extends StatefulWidget {
-  EventPage({super.key});
+  const EventPage({super.key});
 
   @override
   State<EventPage> createState() => _EventPageState();

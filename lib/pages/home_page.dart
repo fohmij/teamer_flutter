@@ -4,14 +4,14 @@ import 'package:teamer/pages/team_select_page.dart';
 import 'package:teamer/pages/stats_page.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({super.key});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  var currentPageIndex = 0;
+  var currentPageIndex = 1;
 
   var appBarTitle = 'Spieler wählen';
 
@@ -23,7 +23,7 @@ class _HomePageState extends State<HomePage> {
       case 1:
         appBarTitle = 'Events & Scoreboard';
       default:
-        appBarTitle = 'Spieler wählen';
+        appBarTitle = 'Events & Scoreboard';
     }
   }
 

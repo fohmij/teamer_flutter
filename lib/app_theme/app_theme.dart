@@ -25,7 +25,7 @@ class AppTheme {
       brightness: Brightness.light,
       scaffoldBackgroundColor: backgroundColorLight,
       appBarTheme: const AppBarTheme(
-        color: backgroundColorLight, // background AppBar
+        backgroundColor: backgroundColorLight, // background AppBar
         iconTheme: IconThemeData(
           color: Colors.black,
         ),
@@ -98,7 +98,7 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: grey400,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: backgroundColorLight,
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -145,7 +145,7 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: backgroundColorDark,
       appBarTheme: const AppBarTheme(
-        color: backgroundColorDark,
+        backgroundColor: backgroundColorDark,
         iconTheme: IconThemeData(
           color: Colors.white,
         ),
@@ -218,7 +218,7 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: grey800,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: backgroundColorDark,
       ),
       inputDecorationTheme: InputDecorationTheme(
