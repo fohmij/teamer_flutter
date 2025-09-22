@@ -18,11 +18,11 @@ dependencies:
   flutter_pdfview: ^1.4.0
   material_design_icons_flutter: ^7.0.7296
   material_symbols_icons: ^4.2873.0
-
   cupertino_icons: ^1.0.8
   sqflite: ^2.3.3
   path: ^1.9.0
   path_provider: ^2.1.5
+  fluttertoast: ^9.0.0
 
 dev_dependencies:
   flutter_test:

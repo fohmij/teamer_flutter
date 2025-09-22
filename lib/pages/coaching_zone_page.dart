@@ -121,6 +121,8 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                         child: statsCard(
                           "Schul-\nRegelwerk",
                           Icons.sports,
+                          statsCardColor: const Color.fromARGB(255, 236, 21, 21),//Color.fromARGB(255, 221, 2, 56),
+                          fontAndIconColor: Colors.white,
                           page: '/rules',
                         ),
                       ),
@@ -159,9 +161,15 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
     );
   }
 
-  Card statsCard(String label, IconData icon, {String page = '/eventpage'}) {
+  Card statsCard(
+    String label,
+    IconData icon, {
+    Color? statsCardColor,
+    Color? fontAndIconColor,
+    String page = '/eventpage',
+  }) {
     return Card(
-      color: Theme.of(context).cardColor,
+      color: statsCardColor ?? Theme.of(context).cardColor,
       elevation: 1,
       child: Stack(
         children: <Widget>[
@@ -173,6 +181,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                 height: 1.1,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: fontAndIconColor,
               ),
             ),
           ),
@@ -182,7 +191,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: [Icon(icon, size: 30)],
+              children: [Icon(icon, size: 30, color: fontAndIconColor)],
             ),
           ),
           Positioned.fill(

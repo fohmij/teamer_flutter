@@ -37,7 +37,7 @@ class _StatsPageState extends State<StatsPage> {
                     Expanded(
                         child: SizedBox(
                       height: 120,
-                      child: statsCard("Alle \nStats", Icons.equalizer),
+                      child: statsCard("Alle \nStats", Icons.equalizer, page: "/all_stats"),
                     )),
                   ],
                 ),

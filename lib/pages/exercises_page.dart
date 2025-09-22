@@ -53,7 +53,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Schulregelwerk')),
+      appBar: AppBar(title: const Text('Übungen')),
       body: localPath == null
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
