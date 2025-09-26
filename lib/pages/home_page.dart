@@ -13,7 +13,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   var currentPageIndex = 1;
 
-  var appBarTitle = 'Spieler wählen';
+  var appBarTitle = 'Events & Scoreboard';
 
   // Funktion updateAppBarTitle()
   void updateAppBarTitle() {

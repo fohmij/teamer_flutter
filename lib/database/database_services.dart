@@ -1,6 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:teamer/database/player.dart';
+import 'package:teamer/database/team_generator.dart';
 
 class DatabaseService {
   static Database? _db;
@@ -28,10 +29,10 @@ class DatabaseService {
   Future<Database> getDatabase() async {
     final databaseDirPath = await getDatabasesPath();
     final databasePath = join(databaseDirPath, "master_db.db");
-    print("DB Path: $databasePath");
-    await deleteDatabase(
-      databasePath,
-    ); // Wenn mal wieder die Database nicht funktioniert nach einer Änderung
+    // print("DB Path: $databasePath");
+    // // await deleteDatabase(
+    //   databasePath,
+    // ); // Wenn mal wieder die Database nicht funktioniert nach einer Änderung
 
     final database = await openDatabase(
       databasePath,
@@ -61,7 +62,7 @@ class DatabaseService {
     await db.rawUpdate('''
     UPDATE $_playersTableName
     SET 
-      $_playersWinRateColumnName = 0,
+      $_playersWinRateColumnName = 0.5,
       $_playersWinsColumnName = 0,
       $_playersLossesColumnName = 0,
       $_playersAttendanceColumnName = 0
@@ -122,6 +123,14 @@ class DatabaseService {
       {_playersStatusColumnName: status},
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<void> updateAllPlayersStatus(int status) async {
+    final db = await database;
+    await db.rawUpdate(
+      'UPDATE $_playersTableName SET $_playersStatusColumnName = ?',
+      [status],
     );
   }
 
@@ -299,5 +308,55 @@ class DatabaseService {
         );
       }
     });
+  }
+
+  Future<void> optimizedTeam() async {
+    List<Player> players = await getPlayers();
+    List<Player> activePlayers = players.where((p) => p.status == 1).toList();
+
+    if (activePlayers.isEmpty) return;
+
+    TeamSplitResult result = splitPlayersByWinRate(activePlayers);
+
+    final db = await database;
+
+    await db.transaction((txn) async {
+      for (Player player in result.teamA) {
+        await txn.update(
+          _playersTableName,
+          {_playersTeamColumnName: 0},
+          where: '$_playersIDColumnName = ?',
+          whereArgs: [player.id],
+        );
+      }
+      for (Player player in result.teamB) {
+        await txn.update(
+          _playersTableName,
+          {_playersTeamColumnName: 1},
+          where: '$_playersIDColumnName = ?',
+          whereArgs: [player.id],
+        );
+      }
+    });
+  }
+
+  Future<double> getWinRateDifference() async {
+    List<Player> players = await getPlayers();
+    List<Player> activePlayers = players.where((p) => p.status == 1).toList();
+
+    if (activePlayers.isEmpty) return 0.0;
+
+    List<Player> teamA = activePlayers.where((p) => p.team == 0).toList();
+    List<Player> teamB = activePlayers.where((p) => p.team == 1).toList();
+
+    double avgA = teamA.isEmpty
+        ? 0.0
+        : teamA.map((p) => p.winRate).reduce((a, b) => a + b) / teamA.length;
+
+    double avgB = teamB.isEmpty
+        ? 0.0
+        : teamB.map((p) => p.winRate).reduce((a, b) => a + b) / teamB.length;
+
+    return (avgA - avgB).abs();
   }
 }

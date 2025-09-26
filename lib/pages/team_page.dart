@@ -13,6 +13,14 @@ class TeamPage extends StatefulWidget {
 class _TeamPageState extends State<TeamPage> {
   final DatabaseService _databaseService = DatabaseService.instance;
 
+  late Future<List<Player>> _playersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _playersFuture = _databaseService.getPlayers();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,7 +50,7 @@ class _TeamPageState extends State<TeamPage> {
                     ),
                   ),
                   FutureBuilder<List<Player>>(
-                    future: _databaseService.getPlayers(),
+                    future: _playersFuture,
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return CircularProgressIndicator();
 
@@ -61,9 +69,23 @@ class _TeamPageState extends State<TeamPage> {
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
                             return ListTile(
-                              title: Text(
-                                filtered[index].name,
-                                style: Theme.of(context).textTheme.bodyMedium,
+                              title: Row(
+                                children: [
+                                  Text(
+                                    filtered[index].name,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                  ),
+                                  SizedBox(width: 20),
+                                  Text(
+                                    filtered[index].winRate.toStringAsFixed(2),
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -88,7 +110,7 @@ class _TeamPageState extends State<TeamPage> {
                     ),
                   ),
                   FutureBuilder<List<Player>>(
-                    future: _databaseService.getPlayers(),
+                    future: _playersFuture,
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return CircularProgressIndicator();
@@ -108,12 +130,24 @@ class _TeamPageState extends State<TeamPage> {
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
                             return ListTile(
-                              title: Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  filtered[index].name,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    filtered[index].winRate.toStringAsFixed(2),
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                  ),
+                                  SizedBox(width: 20),
+                                  Text(
+                                    filtered[index].name,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -123,8 +157,7 @@ class _TeamPageState extends State<TeamPage> {
                       );
                     },
                   ),
-                  SizedBox(height: 40),
-                  SizedBox(height: 20),
+                  SizedBox(height: 60),
                   // Row(
                   //   mainAxisAlignment: MainAxisAlignment.center,
                   //   children: [
@@ -186,6 +219,25 @@ class _TeamPageState extends State<TeamPage> {
                 mainAxisSize:
                     MainAxisSize.min, // nimmt nur so viel Platz wie nötig
                 children: [
+                  FutureBuilder<double>(
+                    future: _databaseService.getWinRateDifference(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator(); // Lade-Spinner
+                      } else if (snapshot.hasError) {
+                        return Text("Fehler: ${snapshot.error}");
+                      } else {
+                        return Text(
+                          "WinRateDelta: ${snapshot.data!.toStringAsFixed(2)}", // z.B. "0.25"
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
