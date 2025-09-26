@@ -15,6 +15,11 @@ class _TeamPageState extends State<TeamPage> {
 
   late Future<List<Player>> _playersFuture;
 
+  String? _game;
+
+  final FocusNode _focusNode =
+      FocusNode(); // um die Tastatur beim Spielererstellen direkt zu öffnen
+
   @override
   void initState() {
     super.initState();
@@ -158,58 +163,6 @@ class _TeamPageState extends State<TeamPage> {
                     },
                   ),
                   SizedBox(height: 60),
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.center,
-                  //   children: [
-                  //     SizedBox(
-                  //       height: 100,
-                  //       width: 100,
-                  //       child: TextField(
-                  //         style: TextStyle(
-                  //           fontWeight: FontWeight.w900,
-                  //           color: Colors.green,
-                  //         ),
-                  //         keyboardType: TextInputType.numberWithOptions(),
-                  //         textAlign: TextAlign.center,
-                  //         decoration: InputDecoration(
-                  //           hintText: 'Grün',
-                  //           hintStyle: TextStyle(
-                  //             fontWeight: FontWeight.w800,
-                  //             fontStyle: FontStyle.italic,
-                  //             color: Colors.green,
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     ),
-                  //     Padding(
-                  //       padding: const EdgeInsets.only(bottom: 32, left: 20, right: 20),
-                  //       child: Text(
-                  //         'Tore',
-                  //         style: Theme.of(context).textTheme.bodyLarge,
-                  //       ),
-                  //     ),
-                  //     SizedBox(
-                  //       height: 100,
-                  //       width: 100,
-                  //       child: TextField(
-                  //         style: TextStyle(
-                  //           fontWeight: FontWeight.w900,
-                  //           color: Colors.red,
-                  //         ),
-                  //         keyboardType: TextInputType.numberWithOptions(),
-                  //         textAlign: TextAlign.center,
-                  //         decoration: InputDecoration(
-                  //           hintText: 'Rot',
-                  //           hintStyle: TextStyle(
-                  //             fontWeight: FontWeight.w800,
-                  //             fontStyle: FontStyle.italic,
-                  //             color: Colors.red,
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ],
-                  // ),
                 ],
               ),
             ),
@@ -245,32 +198,55 @@ class _TeamPageState extends State<TeamPage> {
                         flex: 2,
                         child: TextButton(
                           onPressed: () {
-                            _databaseService.teamAWins();
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Grün gewinnt",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
+                            _showGameDialog(
+                              context: context,
+                              title: "Game Tag",
+                              onFinish: (gameName) async {
+                                final players = await _databaseService
+                                    .getPlayers();
+
+                                final teamAIds = players
+                                    .where((p) => p.team == 0 && p.status == 1)
+                                    .map((p) => p.id)
+                                    .toList();
+                                final teamBIds = players
+                                    .where((p) => p.team == 1 && p.status == 1)
+                                    .map((p) => p.id)
+                                    .toList();
+
+                                await _databaseService.addGame(
+                                  name: gameName,
+                                  teamA: teamAIds,
+                                  teamB: teamBIds,
+                                  teamBWon: 0,
+                                );
+
+                                await _databaseService.teamAWins();
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Grün gewinnt",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+
+                                Navigator.of(
+                                  context,
+                                ).pop(); // zurück zur TeamSelectPage
+                              },
                             );
-                            //Fluttertoast.showToast(msg: "Grün gewinnt");
                           },
                           style: TextButton.styleFrom(
-                            minimumSize: Size(120, 70),
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              68,
-                              155,
-                              71,
-                            ),
+                            minimumSize: const Size(120, 70),
+                            backgroundColor: Colors.green,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(0),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             "Grün \ngewinnt",
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -281,24 +257,51 @@ class _TeamPageState extends State<TeamPage> {
                           ),
                         ),
                       ),
-                      // SizedBox(width: 10.0),
                       Expanded(
                         flex: 1,
                         child: TextButton(
                           onPressed: () {
-                            _databaseService.draw();
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Unentschieden",
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
+                            _showGameDialog(
+                              context: context,
+                              title: "Game Tag",
+                              onFinish: (gameName) async {
+                                final players = await _databaseService
+                                    .getPlayers();
+
+                                final teamAIds = players
+                                    .where((p) => p.team == 0 && p.status == 1)
+                                    .map((p) => p.id)
+                                    .toList();
+                                final teamBIds = players
+                                    .where((p) => p.team == 1 && p.status == 1)
+                                    .map((p) => p.id)
+                                    .toList();
+
+                                await _databaseService.addGame(
+                                  name: gameName,
+                                  teamA: teamAIds,
+                                  teamB: teamBIds,
+                                  teamBWon: -1,
+                                );
+
+                                await _databaseService.teamBWins();
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Draw",
+                                    ),
+                                  ),
+                                );
+
+                                Navigator.of(
+                                  context,
+                                ).pop(); // zurück zur TeamSelectPage
+                              },
                             );
                           },
                           style: TextButton.styleFrom(
-                            minimumSize: Size(80, 70),
+                            minimumSize: const Size(120, 70),
                             backgroundColor: Theme.of(
                               context,
                             ).cardColor, //const Color.fromARGB(255, 84, 75, 95),
@@ -308,6 +311,7 @@ class _TeamPageState extends State<TeamPage> {
                           ),
                           child: Text(
                             "Draw",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 20,
@@ -323,27 +327,55 @@ class _TeamPageState extends State<TeamPage> {
                         flex: 2,
                         child: TextButton(
                           onPressed: () {
-                            _databaseService.teamBWins();
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Rot gewinnt",
-                                  style: TextStyle(color: Colors.white),
-                                  textAlign: TextAlign.right,
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
+                            _showGameDialog(
+                              context: context,
+                              title: "Game Tag",
+                              onFinish: (gameName) async {
+                                final players = await _databaseService
+                                    .getPlayers();
+
+                                final teamAIds = players
+                                    .where((p) => p.team == 0 && p.status == 1)
+                                    .map((p) => p.id)
+                                    .toList();
+                                final teamBIds = players
+                                    .where((p) => p.team == 1 && p.status == 1)
+                                    .map((p) => p.id)
+                                    .toList();
+
+                                await _databaseService.addGame(
+                                  name: gameName,
+                                  teamA: teamAIds,
+                                  teamB: teamBIds,
+                                  teamBWon: 1,
+                                );
+
+                                await _databaseService.draw();
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Rot gewinnt",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+
+                                Navigator.of(
+                                  context,
+                                ).pop(); // zurück zur TeamSelectPage
+                              },
                             );
                           },
                           style: TextButton.styleFrom(
-                            minimumSize: Size(120, 70),
+                            minimumSize: const Size(120, 70),
                             backgroundColor: Colors.red,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(0),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             "Rot \ngewinnt",
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -365,4 +397,85 @@ class _TeamPageState extends State<TeamPage> {
       ),
     );
   }
+}
+
+Future<void> _showGameDialog({
+  required BuildContext context,
+  required String title,
+  required Future<void> Function(String gameName) onFinish,
+}) async {
+  String? game;
+  final focusNode = FocusNode();
+
+  return showDialog(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8.0)),
+        ),
+        title: Text(title, style: Theme.of(context).textTheme.displayLarge),
+        content: SizedBox(
+          width: 560,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 30.0),
+                child: TextField(
+                  autofocus: true,
+                  focusNode: focusNode,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  onChanged: (value) => game = value,
+                  onSubmitted: (value) async {
+                    if (value.isEmpty) return;
+                    await onFinish(value);
+                    Navigator.of(dialogContext).pop();
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Name...',
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 50.0),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 135,
+                      height: 40,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: Text(
+                          "Abbrechen",
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    SizedBox(
+                      height: 40,
+                      width: 135,
+                      child: TextButton(
+                        onPressed: () async {
+                          if (game == null || game!.isEmpty) return;
+                          await onFinish(game!);
+                          Navigator.of(dialogContext).pop();
+                        },
+                        child: Text(
+                          "Fertig",
+                          style: Theme.of(context).textTheme.displaySmall,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

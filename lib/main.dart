@@ -7,6 +7,7 @@ import 'package:teamer/pages/event_page.dart';
 import 'package:teamer/pages/rules_page.dart';
 import 'package:teamer/pages/team_page.dart';
 import 'package:teamer/pages/all_stats_page.dart';
+import 'package:teamer/pages/all_games_page.dart';
 
 import 'package:teamer/app_theme/app_theme.dart';
 
@@ -38,6 +39,7 @@ class MyApp extends StatelessWidget {
           '/exercises': (context) => ExercisesPage(),
           '/team': (context) => TeamPage(),
           '/all_stats': (context) => AllStatsPage(),
+          '/all_games': (context) => AllGamesPage(),
         },
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

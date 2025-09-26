@@ -2,6 +2,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:teamer/database/player.dart';
 import 'package:teamer/database/team_generator.dart';
+import 'package:teamer/database/game.dart';
 
 class DatabaseService {
   static Database? _db;
@@ -18,6 +19,13 @@ class DatabaseService {
   final String _playersLossesColumnName = "losses";
   final String _playersAttendanceColumnName = "attendance";
 
+  final String _gamesTableName = "games";
+  final String _gamesIDColumnName = "id";
+  final String _gamesNameColumnName = "name";
+  final String _gamesTeamAColumnName = "teamA";
+  final String _gamesTeamBColumnName = "teamB";
+  final String _gamesTeamBWonColumnName = "teamBWon";
+
   DatabaseService._constructor();
 
   Future<Database> get database async {
@@ -29,17 +37,13 @@ class DatabaseService {
   Future<Database> getDatabase() async {
     final databaseDirPath = await getDatabasesPath();
     final databasePath = join(databaseDirPath, "master_db.db");
-    // print("DB Path: $databasePath");
-    // // await deleteDatabase(
-    //   databasePath,
-    // ); // Wenn mal wieder die Database nicht funktioniert nach einer Änderung
 
     final database = await openDatabase(
       databasePath,
-      version: 3,
-      onCreate: (db, version) {
-        // Wenn mal wieder die Database nicht funktioniert nach einer Änderung
-        db.execute('''
+      version: 4,
+      onCreate: (db, version) async {
+        // Wenn mal wieder die Database nicht funktioniert nach einer Änderung mit adb shell löschen
+        await db.execute('''
         CREATE TABLE $_playersTableName(
           $_playersIDColumnName INTEGER PRIMARY KEY,
           $_playersNameColumnName TEXT NOT NULL,
@@ -52,6 +56,15 @@ class DatabaseService {
           $_playersAttendanceColumnName INTEGER NOT NULL
         )
         ''');
+        await db.execute('''
+      CREATE TABLE $_gamesTableName(
+        $_gamesIDColumnName INTEGER PRIMARY KEY,
+        $_gamesNameColumnName TEXT NOT NULL,
+        $_gamesTeamAColumnName TEXT NOT NULL,
+        $_gamesTeamBColumnName TEXT NOT NULL,
+        $_gamesTeamBWonColumnName INTEGER NOT NULL
+      )
+    ''');
       },
     );
     return database;
@@ -67,6 +80,11 @@ class DatabaseService {
       $_playersLossesColumnName = 0,
       $_playersAttendanceColumnName = 0
   ''');
+  }
+
+  Future<void> deleteAllGames() async {
+    final db = await database;
+    await db.delete(_gamesTableName);
   }
 
   Future<int> getItemCount() async {
@@ -89,6 +107,21 @@ class DatabaseService {
       _playersWinsColumnName: 0,
       _playersLossesColumnName: 0,
       _playersAttendanceColumnName: 0,
+    });
+  }
+
+  Future<void> addGame({
+    required String name,
+    required List<int> teamA,
+    required List<int> teamB,
+    required int teamBWon,
+  }) async {
+    final db = await database;
+    await db.insert(_gamesTableName, {
+      _gamesNameColumnName: name,
+      _gamesTeamAColumnName: teamA.join(","), // Liste als String speichern
+      _gamesTeamBColumnName: teamB.join(","),
+      _gamesTeamBWonColumnName: teamBWon,
     });
   }
 
@@ -115,6 +148,21 @@ class DatabaseService {
         .toList();
     return players;
   }
+
+Future<List<Game>> getGames() async {
+  final db = await database;
+  final data = await db.query(_gamesTableName, orderBy: "$_gamesNameColumnName COLLATE NOCASE");
+
+  List<Game> games = [];
+  for (var e in data) {
+    final teamANames = await teamIDs2Names(e[_gamesTeamAColumnName] as String);
+    final teamBNames = await teamIDs2Names(e[_gamesTeamBColumnName] as String);
+
+    games.add(Game.fromMap(e, teamANames: teamANames, teamBNames: teamBNames));
+  }
+
+  return games;
+}
 
   Future<void> updatePlayerStatus(int id, int status) async {
     final db = await database;
@@ -358,5 +406,26 @@ class DatabaseService {
         : teamB.map((p) => p.winRate).reduce((a, b) => a + b) / teamB.length;
 
     return (avgA - avgB).abs();
+  }
+
+  Future<String> teamIDs2Names(String team) async {
+    if (team.isEmpty) return "";
+
+    final db = await database;
+    final ids = team
+        .split(",")
+        .map((id) => int.tryParse(id))
+        .whereType<int>()
+        .toList();
+
+    if (ids.isEmpty) return "";
+
+    final placeholders = List.filled(ids.length, "?").join(",");
+    final result = await db.rawQuery(
+      "SELECT name FROM player WHERE id IN ($placeholders) ORDER BY name ASC",
+      ids,
+    );
+
+    return result.map((row) => row["name"] as String).join(", ");
   }
 }

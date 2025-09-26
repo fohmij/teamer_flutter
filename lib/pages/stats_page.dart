@@ -48,7 +48,7 @@ class _StatsPageState extends State<StatsPage> {
               SizedBox(
                 height: 120,
                 width: double.infinity,
-                child: statsCard("Alle \nSpiele", Icons.access_time),
+                child: statsCard("Alle \nSpiele", Icons.access_time, page: "/all_games"),
               ),
               SizedBox(
                 height: 20,
