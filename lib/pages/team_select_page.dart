@@ -42,7 +42,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
         final players = snapshot.data!;
         final selectedCount = players.where((p) => p.status == 1).length;
         final enoughPlayers = selectedCount >= 2;
-        final notTooManyPlayers = selectedCount <= 20;
+        final notTooManyPlayers = selectedCount <= 30;
 
         final allAreSelected =
             players.isNotEmpty && players.every((p) => p.status == 1);
@@ -270,7 +270,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                               ),
                             ],
                           ),
-                          SizedBox(height: 170),
+                          SizedBox(height: 190),
                         ],
                       );
                     } else {

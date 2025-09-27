@@ -200,7 +200,7 @@ class _TeamPageState extends State<TeamPage> {
                           onPressed: () {
                             _showGameDialog(
                               context: context,
-                              title: "Game Tag",
+                              title: "Grün gewinnt",
                               onFinish: (gameName) async {
                                 final players = await _databaseService
                                     .getPlayers();
@@ -263,7 +263,7 @@ class _TeamPageState extends State<TeamPage> {
                           onPressed: () {
                             _showGameDialog(
                               context: context,
-                              title: "Game Tag",
+                              title: "Draw (Unentschieden)",
                               onFinish: (gameName) async {
                                 final players = await _databaseService
                                     .getPlayers();
@@ -284,7 +284,7 @@ class _TeamPageState extends State<TeamPage> {
                                   teamBWon: -1,
                                 );
 
-                                await _databaseService.teamBWins();
+                                await _databaseService.draw();
 
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -329,7 +329,7 @@ class _TeamPageState extends State<TeamPage> {
                           onPressed: () {
                             _showGameDialog(
                               context: context,
-                              title: "Game Tag",
+                              title: "Rot gewinnt",
                               onFinish: (gameName) async {
                                 final players = await _databaseService
                                     .getPlayers();
@@ -350,7 +350,7 @@ class _TeamPageState extends State<TeamPage> {
                                   teamBWon: 1,
                                 );
 
-                                await _databaseService.draw();
+                                await _databaseService.teamBWins();
 
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -464,7 +464,7 @@ Future<void> _showGameDialog({
                           Navigator.of(dialogContext).pop();
                         },
                         child: Text(
-                          "Fertig",
+                          "Speichern",
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
                       ),
