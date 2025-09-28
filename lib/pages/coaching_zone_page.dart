@@ -27,7 +27,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Image(image: AssetImage('assets/pictures/coaching.jpeg')),
+              Image(image: AssetImage('assets/pictures/coaching.png')),
               //padding: const EdgeInsets.only(top: 20.0),
               SizedBox(height: 20),
               SizedBox(

@@ -35,7 +35,7 @@ So können Teams mit bis zu **20 Personen** optimal eingeteilt werden. 👥👥
 
 ---
 
-# English:
+# English
 
 _A team assignment app for school and club gaming activities_
 
