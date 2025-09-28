@@ -21,7 +21,7 @@ Die App unterstützt **Light- und Darkmode** 🌞🌙 und ermöglicht es, Spiele
 
 ## 📲 Download
 
-[App Release APK herunterladen](apk-releases/app-release.apk)
+[App Release APK herunterladen](https://github.com/fohmij/teamer_flutter/releases/tag/v0.1.0)
 
 ---
 
