@@ -21,7 +21,7 @@ Die App unterstützt **Light- und Darkmode** 🌞🌙 und ermöglicht es, Spiele
 
 ## 📲 Download
 
-[App Release APK herunterladen](build/app/outputs/flutter-apk/app-release.apk)
+[App Release APK herunterladen](apk-releases/app-release.apk)
 
 ---
 
