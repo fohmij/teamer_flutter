@@ -19,6 +19,10 @@ Die App unterstützt **Light- und Darkmode** 🌞🌙 und ermöglicht es, Spiele
 - Spart Zeit im Schul- und Vereinsbetrieb ⏱️  
 - Steigert den Spaß durch ausgewogene Teams 🎮 
 
+## 📲 Download
+
+[App Release APK herunterladen](build/app/outputs/flutter-apk/app-release.apk)
+
 ---
 
 ## ⚙️ Funktionsweise der Teameinteilung
