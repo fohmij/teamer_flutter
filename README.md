@@ -1,6 +1,6 @@
 # Teamer 🎉
 
-_Eine Teameinteilungsapp für Spielbetriebe in der Schule oder im Verein
+_Eine Teameinteilungsapp für Spielbetriebe in der Schule oder im Verein_
 
 ![App Screenshot](Plakat.png)
 
