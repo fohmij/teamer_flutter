@@ -30,6 +30,7 @@ dev_dependencies:
 
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.7
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -39,6 +40,21 @@ flutter_launcher_icons:
   adaptive_icon_background: "#5F8F3C"
   remove_alpha_ios: true
   min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#F4FAEC"
+  image: assets/splash_screens/teamer_splash_screen_android12.png
+
+  color_dark: "#262626"
+  image_dark: assets/splash_screens/teamer_splash_screen_android12.png
+
+  android: true
+  ios: true
+
+  android_12:
+    image: assets/splash_screens/teamer_splash_screen_android12.png
+    icon_background_color: "#F4FAEC"
+    icon_background_color_dark: "#262626"
 
 flutter:
 
@@ -54,3 +70,6 @@ flutter:
     - assets/icon/icon.png
     - assets/pdfs/schulregelwerk.pdf
     - assets/pdfs/Floorball-Trainingsunterlagen.pdf
+    - assets/splash_screens/teamer_splash_screen_light.png
+    - assets/splash_screens/teamer_splash_screen_dark.png
+    - assets/splash_screens/teamer_splash_screen_android12.png

@@ -15,10 +15,6 @@ class _TeamPageState extends State<TeamPage> {
 
   late Future<List<Player>> _playersFuture;
 
-  String? _game;
-
-  final FocusNode _focusNode =
-      FocusNode(); // um die Tastatur beim Spielererstellen direkt zu öffnen
 
   @override
   void initState() {
