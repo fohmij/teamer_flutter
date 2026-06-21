@@ -432,7 +432,10 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                           child: ColoredBox(
                             color: player.status == 0
                                 ? Theme.of(context).scaffoldBackgroundColor
-                                : AppTheme.playerSelected,
+                                : Theme.of(context).brightness ==
+                                      Brightness.dark
+                                ? AppTheme.grey700
+                                : AppTheme.grey350,
                             child: ListTile(
                               onTap: () {
                                 int newStatus = player.status == 1 ? 0 : 1;
@@ -454,7 +457,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                               ),
                               trailing: Checkbox(
                                 value: player.status == 1,
-                                activeColor: Colors.green,
+                                activeColor: AppTheme.primaryBlue,
                                 onChanged: (value) {
                                   final newStatus = value == true ? 1 : 0;
                                   _databaseService
@@ -619,12 +622,29 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                       ),
                     );
                   },
-                  backgroundColor: AppTheme.btnBlue1,
+                  backgroundColor: 
+                        Theme.of(context).brightness == Brightness.dark
+                            ? AppTheme.btnBlue2
+                            : AppTheme.btnBlue1,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add),
-                      Text('Player', style: TextStyle(fontSize: 14)),
+                      Icon(
+                        Icons.add,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+
+                      Text(
+                        'Player',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -655,7 +675,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                       );
                     }
                   },
-                  backgroundColor: AppTheme.btnBlue2,
+                  backgroundColor: AppTheme.btnBlue3,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -671,7 +691,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                 height: 65,
                 child: FloatingActionButton(
                   heroTag: "partitionBtn",
-                  backgroundColor: AppTheme.btnBlue2,
+                  backgroundColor: AppTheme.btnBlue3,
                   onPressed: () async {
                     if (enoughPlayers && notTooManyPlayers) {
                       await _databaseService.optimizedTeam();
