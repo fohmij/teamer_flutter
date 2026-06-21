@@ -448,6 +448,136 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                                       });
                                     });
                               },
+                              onLongPress: () {
+                                showDialog(
+                                  context: this.context,
+                                  builder: (_) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(8.0),
+                                      ),
+                                    ),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 6.0,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 2.0,
+                                                ),
+                                                child: Icon(
+                                                  Icons.delete,
+                                                  size: 25.0,
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  left: 8.0,
+                                                ),
+                                                child: Text(
+                                                  'Löschen',
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.displayLarge,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 6.0,
+                                          ),
+                                          child: Divider(),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 30.0,
+                                          ),
+                                          child: Text.rich(
+                                            TextSpan(
+                                              text: 'Soll ',
+                                              children: [
+                                                TextSpan(
+                                                  text: player.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const TextSpan(
+                                                  text:
+                                                      ' wirklich dauerhaft gelöscht werden?',
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12.0,
+                                          ),
+                                          child: Divider(),
+                                        ),
+                                        Row(
+                                          children: [
+                                            SizedBox(
+                                              height: 40,
+                                              width: 135,
+                                              child: OutlinedButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                },
+                                                child: Text(
+                                                  "Abbrechen",
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.labelSmall,
+                                                ),
+                                              ),
+                                            ),
+                                            Spacer(),
+                                            SizedBox(
+                                              height: 40,
+                                              width: 135,
+                                              child: TextButton(
+                                                style: TextButton.styleFrom(
+                                                  backgroundColor:
+                                                      AppTheme.deleteRed,
+                                                ),
+                                                onPressed: () {
+                                                  _databaseService
+                                                      .deletePlayer(player.id)
+                                                      .then((_) {
+                                                        setState(() {
+                                                          _playersFuture =
+                                                              _databaseService
+                                                                  .getPlayers();
+                                                        });
+                                                      });
+                                                  Navigator.pop(this.context);
+                                                },
+                                                child: Text(
+                                                  "Löschen",
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.displaySmall,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
                               title: Padding(
                                 padding: const EdgeInsets.only(left: 14.0),
                                 child: Text(
@@ -622,10 +752,10 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                       ),
                     );
                   },
-                  backgroundColor: 
-                        Theme.of(context).brightness == Brightness.dark
-                            ? AppTheme.btnBlue2
-                            : AppTheme.btnBlue1,
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.btnBlue2
+                      : AppTheme.btnBlue1,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
