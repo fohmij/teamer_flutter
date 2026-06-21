@@ -59,38 +59,42 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
               Stack(
                 alignment: Alignment.center,
                 children: [
-                  Row(
-                    children: [
-                      const SizedBox(width: 15),
-                      Text(
-                        "Name",
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Text(
-                            "Alle",
-                            style: Theme.of(context).textTheme.labelMedium,
-                          ),
-                          Checkbox(
-                            value: allBtnSelected,
-                            activeColor: Colors.green,
-                            onChanged: (bool? value) async {
-                              final newStatus = value == true ? 1 : 0;
-                              await _databaseService.updateAllPlayersStatus(
-                                newStatus,
-                              );
-                              setState(() {
-                                allBtnSelected = value ?? false;
-                                _playersFuture = _databaseService.getPlayers();
-                              });
-                            },
-                          ),
-                          SizedBox(width: 24),
-                        ],
-                      ),
-                    ],
+                  Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 15),
+                        Text(
+                          "Name",
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Text(
+                              "Alle",
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                            Checkbox(
+                              value: allBtnSelected,
+                              activeColor: Colors.green,
+                              onChanged: (bool? value) async {
+                                final newStatus = value == true ? 1 : 0;
+                                await _databaseService.updateAllPlayersStatus(
+                                  newStatus,
+                                );
+                                setState(() {
+                                  allBtnSelected = value ?? false;
+                                  _playersFuture = _databaseService
+                                      .getPlayers();
+                                });
+                              },
+                            ),
+                            SizedBox(width: 24),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   Align(
                     alignment: Alignment.center,
@@ -425,56 +429,61 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                               ),
                             ],
                           ),
-                          child: ListTile(
-                            tileColor: player.status == 0
+                          child: ColoredBox(
+                            color: player.status == 0
                                 ? Theme.of(context).scaffoldBackgroundColor
                                 : AppTheme.playerSelected,
-                            onTap: () {
-                              int newStatus = player.status == 1 ? 0 : 1;
-                              _databaseService
-                                  .updatePlayerStatus(player.id, newStatus)
-                                  .then((_) {
-                                    setState(() {
-                                      _playersFuture = _databaseService
-                                          .getPlayers();
-                                    });
-                                  });
-                            },
-                            title: Padding(
-                              padding: const EdgeInsets.only(left: 14.0),
-                              child: Text(
-                                player.name,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ),
-                            trailing: Checkbox(
-                              value: player.status == 1,
-                              activeColor: Colors.green,
-                              onChanged: (value) {
-                                final newStatus = value == true ? 1 : 0;
+                            child: ListTile(
+                              onTap: () {
+                                int newStatus = player.status == 1 ? 0 : 1;
                                 _databaseService
                                     .updatePlayerStatus(player.id, newStatus)
-                                    .then((_) async {
-                                      final players = await _databaseService
-                                          .getPlayers();
-
+                                    .then((_) {
                                       setState(() {
-                                        _playersFuture = Future.value(players);
-
-                                        // wenn einer abgewählt wurde → allBtnSelected = false
-                                        if (newStatus == 0 && allBtnSelected) {
-                                          allBtnSelected = false;
-                                        } else {
-                                          // neu prüfen ob jetzt wirklich ALLE ausgewählt sind
-                                          allBtnSelected =
-                                              players.isNotEmpty &&
-                                              players.every(
-                                                (p) => p.status == 1,
-                                              );
-                                        }
+                                        _playersFuture = _databaseService
+                                            .getPlayers();
                                       });
                                     });
                               },
+                              title: Padding(
+                                padding: const EdgeInsets.only(left: 14.0),
+                                child: Text(
+                                  player.name,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                              trailing: Checkbox(
+                                value: player.status == 1,
+                                activeColor: Colors.green,
+                                onChanged: (value) {
+                                  final newStatus = value == true ? 1 : 0;
+                                  _databaseService
+                                      .updatePlayerStatus(player.id, newStatus)
+                                      .then((_) async {
+                                        final players = await _databaseService
+                                            .getPlayers();
+
+                                        setState(() {
+                                          _playersFuture = Future.value(
+                                            players,
+                                          );
+
+                                          // wenn einer abgewählt wurde → allBtnSelected = false
+                                          if (newStatus == 0 &&
+                                              allBtnSelected) {
+                                            allBtnSelected = false;
+                                          } else {
+                                            // neu prüfen ob jetzt wirklich ALLE ausgewählt sind
+                                            allBtnSelected =
+                                                players.isNotEmpty &&
+                                                players.every(
+                                                  (p) => p.status == 1,
+                                                );
+                                          }
+                                        });
+                                      });
+                                },
+                              ),
                             ),
                           ),
                         ),
@@ -501,6 +510,131 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                 height: 65,
                 child: FloatingActionButton(
                   heroTag: "randomBtn",
+                  onPressed: () {
+                    showDialog(
+                      context: this.context,
+                      builder: (_) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                        ),
+                        title: Text(
+                          'Neuer Spieler',
+                          style: Theme.of(context).textTheme.displayLarge,
+                        ),
+                        content: SizedBox(
+                          width: 560,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 30.0),
+                                child: TextField(
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _player = value;
+                                    });
+                                  },
+                                  onSubmitted: (value) {
+                                    if (_player == null || _player == "") {
+                                      return;
+                                    }
+                                    _databaseService.addPlayer(_player!);
+                                    setState(() {
+                                      _player = null;
+                                      _playersFuture = _databaseService
+                                          .getPlayers();
+                                    });
+                                    Navigator.pop(this.context);
+                                  },
+                                  decoration: InputDecoration(
+                                    border: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    hintText: 'Name...',
+                                  ),
+                                  focusNode: _focusNode,
+                                  autofocus: true,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 50.0),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 135,
+                                      height: 40,
+                                      child: OutlinedButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text(
+                                          "Abbrechen",
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.labelSmall,
+                                        ),
+                                      ),
+                                    ),
+                                    Spacer(),
+                                    SizedBox(
+                                      height: 40,
+                                      width: 135,
+                                      child: TextButton(
+                                        onPressed: () {
+                                          if (_player == null ||
+                                              _player == "") {
+                                            return;
+                                          }
+                                          _databaseService.addPlayer(_player!).then((
+                                            _,
+                                          ) {
+                                            setState(() {
+                                              _player = null;
+                                              _playersFuture = _databaseService
+                                                  .getPlayers(); // 🔁 wichtig
+                                            });
+                                            Navigator.pop(
+                                              // ignore: use_build_context_synchronously
+                                              this.context,
+                                            );
+                                          });
+                                        },
+                                        child: Text(
+                                          "Fertig",
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.displaySmall,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  backgroundColor: AppTheme.btnBlue1,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add),
+                      Text('Player', style: TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 20, width: 100),
+              SizedBox(
+                width: 65,
+                height: 65,
+                child: FloatingActionButton(
+                  heroTag: "randomBtn",
                   onPressed: () async {
                     if (enoughPlayers) {
                       await _databaseService.randomTeams();
@@ -521,7 +655,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                       );
                     }
                   },
-                  backgroundColor: const Color.fromARGB(255, 190, 75, 40),
+                  backgroundColor: AppTheme.btnBlue2,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -537,6 +671,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                 height: 65,
                 child: FloatingActionButton(
                   heroTag: "partitionBtn",
+                  backgroundColor: AppTheme.btnBlue2,
                   onPressed: () async {
                     if (enoughPlayers && notTooManyPlayers) {
                       await _databaseService.optimizedTeam();

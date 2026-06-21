@@ -13,6 +13,8 @@ class AppTheme {
   static const Color grey800 = Color.fromARGB(255, 66, 66, 66);
   static const Color grey900 = Color.fromARGB(255, 33, 33, 33);
   static const Color cardColorLight = Color.fromARGB(255, 205, 225, 235);
+  static const Color btnBlue1 = Color.fromARGB(210, 102, 157, 214);
+  static const Color btnBlue2 = Color.fromARGB(220, 38, 96, 171);
   static const Color primaryBlue = Color.fromARGB(198, 38, 96, 171);
   static const Color secondaryBlue = Color.fromARGB(255, 30, 89, 148);
   static const Color tertiaryBlue = Color.fromARGB(255, 3, 64, 95);
