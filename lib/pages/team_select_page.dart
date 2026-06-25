@@ -32,6 +32,8 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return FutureBuilder(
       future: _playersFuture,
       builder: (context, snapshot) {
@@ -78,6 +80,11 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                             Checkbox(
                               value: allBtnSelected,
                               activeColor: AppTheme.btnBlue2,
+                              checkColor: Colors.white,
+                              side: BorderSide(
+                                color: AppTheme.grey600,
+                                width: 2
+                              ),
                               onChanged: (bool? value) async {
                                 final newStatus = value == true ? 1 : 0;
                                 await _databaseService.updateAllPlayersStatus(
@@ -443,8 +450,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                           child: ColoredBox(
                             color: player.status == 0
                                 ? Theme.of(context).scaffoldBackgroundColor
-                                : Theme.of(context).brightness ==
-                                      Brightness.dark
+                                : isDark
                                 ? AppTheme.grey700
                                 : AppTheme.grey350,
                             child: ListTile(
@@ -599,6 +605,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                               trailing: Checkbox(
                                 value: player.status == 1,
                                 activeColor: AppTheme.primaryBlue,
+                                checkColor: Colors.white,
                                 onChanged: (value) {
                                   final newStatus = value == true ? 1 : 0;
                                   _databaseService
@@ -763,7 +770,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                     );
                   },
                   backgroundColor:
-                      Theme.of(context).brightness == Brightness.dark
+                      isDark
                       ? AppTheme.btnBlue2
                       : AppTheme.btnBlue1,
                   child: Column(
@@ -771,7 +778,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                     children: [
                       Icon(
                         Icons.add,
-                        color: Theme.of(context).brightness == Brightness.dark
+                        color: isDark
                             ? Colors.white
                             : Colors.black,
                       ),
@@ -780,7 +787,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                         'Player',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Theme.of(context).brightness == Brightness.dark
+                          color: isDark
                               ? Colors.white
                               : Colors.black,
                         ),
@@ -805,11 +812,11 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                         toastLength: Toast.LENGTH_SHORT,
                         gravity: ToastGravity.BOTTOM,
                         backgroundColor:
-                            Theme.of(context).brightness == Brightness.dark
+                            isDark
                             ? Colors.black
                             : Colors.white,
                         textColor:
-                            Theme.of(context).brightness == Brightness.dark
+                            isDark
                             ? Colors.white
                             : Colors.black,
                       );
@@ -846,11 +853,11 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                         toastLength: Toast.LENGTH_SHORT,
                         gravity: ToastGravity.BOTTOM,
                         backgroundColor:
-                            Theme.of(context).brightness == Brightness.dark
+                            isDark
                             ? Colors.black
                             : Colors.white,
                         textColor:
-                            Theme.of(context).brightness == Brightness.dark
+                            isDark
                             ? Colors.white
                             : Colors.black,
                       );
