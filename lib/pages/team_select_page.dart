@@ -77,7 +77,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                             ),
                             Checkbox(
                               value: allBtnSelected,
-                              activeColor: Colors.green,
+                              activeColor: AppTheme.btnBlue2,
                               onChanged: (bool? value) async {
                                 final newStatus = value == true ? 1 : 0;
                                 await _databaseService.updateAllPlayersStatus(
@@ -98,9 +98,20 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                   ),
                   Align(
                     alignment: Alignment.center,
-                    child: Text(
-                      "($selectedCount)",
-                      style: Theme.of(context).textTheme.labelMedium,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.group_outlined,
+                          color: AppTheme.grey600,
+                          size: 18.0,
+                        ),
+                        SizedBox(width: 5),
+                        Text(
+                          "$selectedCount/${players.length}",
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight(600), color : AppTheme.grey600),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -642,7 +653,6 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                 width: 65,
                 height: 65,
                 child: FloatingActionButton(
-                  heroTag: "randomBtn",
                   onPressed: () {
                     showDialog(
                       context: this.context,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 import '../database/player.dart';
 import 'package:teamer/database/database_services.dart';
+import 'package:material_symbols_icons/material_symbols_icons.dart';
 
 class TeamPage extends StatefulWidget {
   const TeamPage({super.key});
@@ -12,9 +13,7 @@ class TeamPage extends StatefulWidget {
 
 class _TeamPageState extends State<TeamPage> {
   final DatabaseService _databaseService = DatabaseService.instance;
-
   late Future<List<Player>> _playersFuture;
-
 
   @override
   void initState() {
@@ -22,373 +21,443 @@ class _TeamPageState extends State<TeamPage> {
     _playersFuture = _databaseService.getPlayers();
   }
 
+  Future<void> _saveGame({
+    required BuildContext context,
+    required String title,
+    required int teamBWon,
+  }) async {
+    _showGameDialog(
+      context: context,
+      title: title,
+      onFinish: (gameName) async {
+        final players = await _databaseService.getPlayers();
+
+        final teamAIds = players
+            .where((p) => p.team == 0 && p.status == 1)
+            .map((p) => p.id)
+            .toList();
+
+        final teamBIds = players
+            .where((p) => p.team == 1 && p.status == 1)
+            .map((p) => p.id)
+            .toList();
+
+        await _databaseService.addGame(
+          name: gameName,
+          teamA: teamAIds,
+          teamB: teamBIds,
+          teamBWon: teamBWon,
+        );
+
+        if (teamBWon == 0) {
+          await _databaseService.teamAWins();
+        } else if (teamBWon == 1) {
+          await _databaseService.teamBWins();
+        } else {
+          await _databaseService.draw();
+        }
+
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(title)));
+
+        Navigator.of(context).pop();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Teams'),
+        title: const Text('Teams'),
         titleTextStyle: Theme.of(context).textTheme.titleLarge,
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? AppTheme.navigationBarDark
-            : AppTheme.navigationBarLight,
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: backgroundColor,
       ),
       body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0, top: 16.0),
-                    child: Text(
-                      'Team Grün',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ),
-                  FutureBuilder<List<Player>>(
-                    future: _playersFuture,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return CircularProgressIndicator();
+        child: FutureBuilder<List<Player>>(
+          future: _playersFuture,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-                      final filtered = snapshot.data!
-                          .where(
-                            (player) => player.team == 0 && player.status == 1,
-                          )
-                          .toList();
+            final players = snapshot.data!;
+            final teamA = players
+                .where((p) => p.team == 0 && p.status == 1)
+                .toList();
 
-                      final height = (filtered.length) * 60.0;
+            final teamB = players
+                .where((p) => p.team == 1 && p.status == 1)
+                .toList();
 
-                      return SizedBox(
-                        height: height,
-                        child: ListView.separated(
-                          physics: NeverScrollableScrollPhysics(),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              title: Row(
-                                children: [
-                                  Text(
-                                    filtered[index].name,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
-                                  ),
-                                  SizedBox(width: 20),
-                                  Text(
-                                    filtered[index].winRate.toStringAsFixed(2),
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.w300,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                          separatorBuilder: (context, index) =>
-                              Divider(height: 1),
-                        ),
-                      );
-                    },
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16.0),
-                      child: Text(
-                        'Team Rot',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ),
-                  FutureBuilder<List<Player>>(
-                    future: _playersFuture,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return CircularProgressIndicator();
-                      }
-                      final filtered = snapshot.data!
-                          .where(
-                            (player) => player.team == 1 && player.status == 1,
-                          )
-                          .toList();
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  child: _HeaderInfo(playerCount: teamA.length + teamB.length),
+                ),
 
-                      final height = (filtered.length) * 60.0;
-
-                      return SizedBox(
-                        height: height,
-                        child: ListView.separated(
-                          physics: NeverScrollableScrollPhysics(),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              title: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    filtered[index].winRate.toStringAsFixed(2),
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.w300,
-                                    ),
-                                  ),
-                                  SizedBox(width: 20),
-                                  Text(
-                                    filtered[index].name,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                          separatorBuilder: (context, index) =>
-                              Divider(height: 1),
-                        ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 60),
-                ],
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomLeft,
-              child: Column(
-                mainAxisSize:
-                    MainAxisSize.min, // nimmt nur so viel Platz wie nötig
-                children: [
-                  FutureBuilder<double>(
-                    future: _databaseService.getWinRateDifference(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator(); // Lade-Spinner
-                      } else if (snapshot.hasError) {
-                        return Text("Fehler: ${snapshot.error}");
-                      } else {
-                        return Text(
-                          "WinRateDelta: ${snapshot.data!.toStringAsFixed(2)}", // z.B. "0.25"
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        flex: 2,
-                        child: TextButton(
-                          onPressed: () {
-                            _showGameDialog(
-                              context: context,
-                              title: "Grün gewinnt",
-                              onFinish: (gameName) async {
-                                final players = await _databaseService
-                                    .getPlayers();
-
-                                final teamAIds = players
-                                    .where((p) => p.team == 0 && p.status == 1)
-                                    .map((p) => p.id)
-                                    .toList();
-                                final teamBIds = players
-                                    .where((p) => p.team == 1 && p.status == 1)
-                                    .map((p) => p.id)
-                                    .toList();
-
-                                await _databaseService.addGame(
-                                  name: gameName,
-                                  teamA: teamAIds,
-                                  teamB: teamBIds,
-                                  teamBWon: 0,
-                                );
-
-                                await _databaseService.teamAWins();
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Grün gewinnt",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-
-                                Navigator.of(
-                                  context,
-                                ).pop(); // zurück zur TeamSelectPage
-                              },
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(120, 70),
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(0),
-                            ),
-                          ),
-                          child: const Text(
-                            "Grün \ngewinnt",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.white,
-                            ),
+                        child: _TeamCard(
+                          title: 'Team A',
+                          players: teamA,
+                          color: AppTheme.btnBlue3,
+                          borderRadius: BorderRadius.only(
+                            topRight: Radius.circular(20),
+                            bottomRight: Radius.circular(20),
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        flex: 1,
-                        child: TextButton(
-                          onPressed: () {
-                            _showGameDialog(
-                              context: context,
-                              title: "Draw (Unentschieden)",
-                              onFinish: (gameName) async {
-                                final players = await _databaseService
-                                    .getPlayers();
-
-                                final teamAIds = players
-                                    .where((p) => p.team == 0 && p.status == 1)
-                                    .map((p) => p.id)
-                                    .toList();
-                                final teamBIds = players
-                                    .where((p) => p.team == 1 && p.status == 1)
-                                    .map((p) => p.id)
-                                    .toList();
-
-                                await _databaseService.addGame(
-                                  name: gameName,
-                                  teamA: teamAIds,
-                                  teamB: teamBIds,
-                                  teamBWon: -1,
-                                );
-
-                                await _databaseService.draw();
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Draw",
-                                    ),
-                                  ),
-                                );
-
-                                Navigator.of(
-                                  context,
-                                ).pop(); // zurück zur TeamSelectPage
-                              },
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(120, 70),
-                            backgroundColor: Theme.of(
-                              context,
-                            ).cardColor, //const Color.fromARGB(255, 84, 75, 95),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(0),
-                            ),
-                          ),
-                          child: Text(
-                            "Draw",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Theme.of(
-                                context,
-                              ).textTheme.bodyLarge?.color,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // SizedBox(width: 10.0),
-                      Expanded(
-                        flex: 2,
-                        child: TextButton(
-                          onPressed: () {
-                            _showGameDialog(
-                              context: context,
-                              title: "Rot gewinnt",
-                              onFinish: (gameName) async {
-                                final players = await _databaseService
-                                    .getPlayers();
-
-                                final teamAIds = players
-                                    .where((p) => p.team == 0 && p.status == 1)
-                                    .map((p) => p.id)
-                                    .toList();
-                                final teamBIds = players
-                                    .where((p) => p.team == 1 && p.status == 1)
-                                    .map((p) => p.id)
-                                    .toList();
-
-                                await _databaseService.addGame(
-                                  name: gameName,
-                                  teamA: teamAIds,
-                                  teamB: teamBIds,
-                                  teamBWon: 1,
-                                );
-
-                                await _databaseService.teamBWins();
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Rot gewinnt",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-
-                                Navigator.of(
-                                  context,
-                                ).pop(); // zurück zur TeamSelectPage
-                              },
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(120, 70),
-                            backgroundColor: Colors.red,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(0),
-                            ),
-                          ),
-                          child: const Text(
-                            "Rot \ngewinnt",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.white,
-                            ),
+                        child: _TeamCard(
+                          title: 'Team B',
+                          players: teamB,
+                          color: AppTheme.btnBlue2,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            bottomLeft: Radius.circular(20),
                           ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 36,
+                    vertical: 20,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          thickness: 1,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey
+                              : AppTheme.grey600,
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Symbols.trophy,
+                              size: 18,
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.grey
+                                  : AppTheme.grey600,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Spielergebnis festhalten',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey
+                                        : AppTheme.grey600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Expanded(
+                        child: Divider(
+                          thickness: 1,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey
+                              : AppTheme.grey600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _ResultButton(
+                          label: 'A gewinnt',
+                          color: AppTheme.btnBlue3,
+                          onPressed: () => _saveGame(
+                            context: context,
+                            title: 'Team A gewinnt',
+                            teamBWon: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ResultButton(
+                          icon: Icon(
+                            Symbols.handshake,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : AppTheme.grey700,
+                            size: 40,
+                            fill: 1,
+                          ),
+                          label: 'Remis',
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppTheme.grey700
+                              : AppTheme.grey350,
+                          textColor:
+                              Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : AppTheme.grey700,
+                          onPressed: () => _saveGame(
+                            context: context,
+                            title: 'Unentschieden',
+                            teamBWon: -1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ResultButton(
+                          label: 'B gewinnt',
+                          color: AppTheme.btnBlue2,
+                          onPressed: () => _saveGame(
+                            context: context,
+                            title: 'Team B gewinnt',
+                            teamBWon: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderInfo extends StatelessWidget {
+  final int playerCount;
+
+  const _HeaderInfo({required this.playerCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.group_outlined,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey
+              : AppTheme.grey600,
+          size: 18.0,
+        ),
+        SizedBox(width: 5),
+        Text(
+          '$playerCount Spieler',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey
+                : AppTheme.grey600,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TeamCard extends StatelessWidget {
+  final String title;
+  final List<Player> players;
+  final Color color;
+  final BorderRadius borderRadius;
+
+  const _TeamCard({
+    required this.title,
+    required this.players,
+    required this.color,
+    required this.borderRadius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.grey700
+            : AppTheme.grey350,
+        borderRadius: borderRadius,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            color: color,
+            child: Column(
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${players.length} Spieler',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-            // SizedBox(height: 100),
-          ],
+          ),
+
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: players.length,
+              separatorBuilder: (_, __) => Divider(
+                height: 1,
+                indent: 18,
+                endIndent: 18,
+                color: AppTheme.grey400.withAlpha(90),
+              ),
+              itemBuilder: (context, index) {
+                final player = players[index];
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 15,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          player.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 19,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResultButton extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+  final Icon icon;
+  final Color? textColor;
+
+  const _ResultButton({
+    required this.label,
+    required this.color,
+    required this.onPressed,
+    this.icon = const Icon(
+      Symbols.trophy,
+      size: 40,
+      fill: 1,
+      color: Colors.white,
+    ),
+    this.textColor = Colors.white,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Column(
+            children: [
+              icon,
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -401,76 +470,44 @@ Future<void> _showGameDialog({
   required Future<void> Function(String gameName) onFinish,
 }) async {
   String? game;
-  final focusNode = FocusNode();
 
   return showDialog(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8.0)),
-        ),
-        title: Text(title, style: Theme.of(context).textTheme.displayLarge),
-        content: SizedBox(
-          width: 560,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 30.0),
-                child: TextField(
-                  autofocus: true,
-                  focusNode: focusNode,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  onChanged: (value) => game = value,
-                  onSubmitted: (value) async {
-                    if (value.isEmpty) return;
-                    await onFinish(value);
-                    Navigator.of(dialogContext).pop();
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Name...',
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 50.0),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 135,
-                      height: 40,
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: Text(
-                          "Abbrechen",
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    SizedBox(
-                      height: 40,
-                      width: 135,
-                      child: TextButton(
-                        onPressed: () async {
-                          if (game == null || game!.isEmpty) return;
-                          await onFinish(game!);
-                          Navigator.of(dialogContext).pop();
-                        },
-                        child: Text(
-                          "Speichern",
-                          style: Theme.of(context).textTheme.displaySmall,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(title),
+        content: TextField(
+          autofocus: true,
+          onChanged: (value) => game = value,
+          onSubmitted: (value) async {
+            if (value.isEmpty) return;
+            await onFinish(value);
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'Spielname',
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (game == null || game!.isEmpty) return;
+              await onFinish(game!);
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            child: const Text('Speichern'),
+          ),
+        ],
       );
     },
   );
