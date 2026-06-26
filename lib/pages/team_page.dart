@@ -537,7 +537,15 @@ Future<void> _showGameDialog({
                     height: 40,
                     width: 135,
                     child: TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      onPressed: () async {
+                        if (game == null || game!.trim().isEmpty) return;
+
+                        await onFinish(game!.trim());
+
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                      },
                       child: Text(
                         "Fertig",
                         style: Theme.of(context).textTheme.displaySmall,
