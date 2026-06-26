@@ -129,16 +129,25 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: ListView.separated(
-        itemCount: players.length + 1,
+        itemCount: players.length + 2,
         separatorBuilder: (context, index) {
-          return Divider(thickness: 1, height: 1, color: isDark ? AppTheme.navigationBarDark : AppTheme.grey400,);
+          return Divider(
+            thickness: 1,
+            height: 1,
+            color: isDark ? AppTheme.navigationBarDark : AppTheme.grey400,
+          );
         },
         itemBuilder: (context, index) {
-          if (index == players.length) {
+          if (index == 0) {
+            return const SizedBox(height: 8);
+          }
+
+          if (index == players.length + 1) {
             return _buildAddPlayerListItem();
           }
 
-          return _buildPlayerListItem(players[index]);
+          final player = players[index - 1];
+          return _buildPlayerListItem(player);
         },
       ),
     );

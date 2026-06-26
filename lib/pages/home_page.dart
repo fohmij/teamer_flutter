@@ -92,9 +92,8 @@ class _HomePageState extends State<HomePage> {
                   fontWeight: FontWeight.w800,
                   fontSize: 21,
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? AppTheme.grey300
-                      : AppTheme.grey600,
-                  fontStyle: FontStyle.italic,
+                      ? AppTheme.grey400
+                      : AppTheme.grey800,
                 ),
               ),
             ),
