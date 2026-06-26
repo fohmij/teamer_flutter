@@ -71,7 +71,6 @@ class _TeamPageState extends State<TeamPage> {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -108,7 +107,7 @@ class _TeamPageState extends State<TeamPage> {
 
                 Expanded(
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: _TeamCard(
@@ -471,6 +470,7 @@ Future<void> _showGameDialog({
   required Future<void> Function(String gameName) onFinish,
 }) async {
   String? game;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
 
   return showDialog(
     context: context,
@@ -513,6 +513,16 @@ Future<void> _showGameDialog({
                     width: 135,
                     height: 40,
                     child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? AppTheme.grey700
+                            : Colors.white,
+                        foregroundColor: Colors.white,
+                        side: BorderSide(
+                          color: isDark ? Colors.transparent : AppTheme.grey300,
+                          width: 1,
+                        ),
+                      ),
                       onPressed: () {
                         Navigator.pop(context);
                       },

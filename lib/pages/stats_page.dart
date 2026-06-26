@@ -160,14 +160,14 @@ class _StatsPageState extends State<StatsPage> {
             width: 400,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.asset('assets/pictures/Street_Floorball.jpg',
+              child: Image.asset('assets/pictures/Hannover2026.png',
                   fit: BoxFit.cover),
             ),
           ),
           Padding(
             padding: const EdgeInsets.only(top: 10, left: 20),
             child: Text(
-              "Street-Floorball 2025",
+          'SFT Championships \nHannover 2026',
               style: TextStyle(
                   fontSize: 24,
                   color: Colors.white,

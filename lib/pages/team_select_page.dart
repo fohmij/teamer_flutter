@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:teamer/database/database_services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:teamer/pages/scan.dart';
 import '../database/player.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -125,11 +126,12 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
   }
 
   Widget _buildPlayersList(List<Player> players) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: ListView.separated(
         itemCount: players.length + 1,
         separatorBuilder: (context, index) {
-          return const Divider(thickness: 1, height: 1);
+          return Divider(thickness: 1, height: 1, color: isDark ? AppTheme.navigationBarDark : AppTheme.grey400,);
         },
         itemBuilder: (context, index) {
           if (index == players.length) {
@@ -248,10 +250,12 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
   }
 
   void _showAddPlayerDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: const RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: isDark ? AppTheme.grey700 : Colors.white),
           borderRadius: BorderRadius.all(Radius.circular(8.0)),
         ),
         title: Text(
@@ -293,6 +297,18 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                       width: 135,
                       height: 40,
                       child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: isDark
+                              ? AppTheme.grey700
+                              : Colors.white,
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: isDark
+                                ? Colors.transparent
+                                : AppTheme.grey300,
+                            width: 1,
+                          ),
+                        ),
                         onPressed: () {
                           Navigator.pop(context);
                         },
@@ -324,8 +340,14 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     );
   }
 
-  void _scanPlayers() {
-    _showPlayerSelectionToast('Scan-Funktion folgt');
+  Future<void> _scanPlayers() async {
+    final changed = await showWhatsAppPollScanDrawer(context);
+
+    if (changed == true && mounted) {
+      setState(() {
+        _playersFuture = _databaseService.getPlayers();
+      });
+    }
   }
 
   void _submitNewPlayer() {
@@ -421,8 +443,12 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
           const SizedBox(height: 20, width: 150),
           _RevealFloatingActionButton(
             key: const ValueKey('teamRevealFab'),
-            mainButton: _RandomTeamFloatingButton( onPressed: () => _randomTeam(enoughPlayers),),
-            revealedButton: _BalancedTeamFloatingButton( onPressed: () => _optimizedTeam(enoughPlayers, notTooManyPlayers),), 
+            mainButton: _RandomTeamFloatingButton(
+              onPressed: () => _randomTeam(enoughPlayers),
+            ),
+            revealedButton: _BalancedTeamFloatingButton(
+              onPressed: () => _optimizedTeam(enoughPlayers, notTooManyPlayers),
+            ),
           ),
           const SizedBox(height: 110, width: 150),
         ],
@@ -557,12 +583,18 @@ class _DeleteDialogActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         SizedBox(
           height: 40,
           width: 135,
           child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+              foregroundColor: Colors.white,
+              side: BorderSide.none,
+            ),
             onPressed: onCancel,
             child: Text(
               'Abbrechen',
@@ -689,7 +721,10 @@ class _ScanFloatingButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.document_scanner, color: isDark ? Colors.white : Colors.black),
+            Icon(
+              Icons.document_scanner,
+              color: isDark ? Colors.white : Colors.black,
+            ),
             Text(
               'Scan',
               style: TextStyle(

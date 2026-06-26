@@ -15,7 +15,7 @@ class _EventPageState extends State<EventPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Street-Floorball 2025',
+          'SFT Championships\n Hannover 2026',
         ),
         titleTextStyle: Theme.of(context).textTheme.titleLarge,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
