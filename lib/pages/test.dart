@@ -224,7 +224,7 @@ class _TeamPageState extends State<TeamPage> {
                           label: 'Remis',
                           color: Theme.of(context).brightness == Brightness.dark
                               ? AppTheme.grey700
-                              : AppTheme.navigationBarLight,
+                              : AppTheme.grey350,
                           textColor:
                               Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
@@ -313,7 +313,7 @@ class _TeamCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? AppTheme.grey700
-            : AppTheme.navigationBarLight,
+            : AppTheme.grey350,
         borderRadius: borderRadius,
       ),
       clipBehavior: Clip.antiAlias,
@@ -474,72 +474,49 @@ Future<void> _showGameDialog({
 
   return showDialog(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8.0)),
-      ),
-      title: Text(title, style: Theme.of(context).textTheme.displayLarge),
-      content: SizedBox(
-        width: 560,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 30.0),
-              child: TextField(
-                style: Theme.of(context).textTheme.bodyMedium,
-                onChanged: (value) => game = value,
-                onSubmitted: (value) async {
-                  if (value.isEmpty) return;
-                  await onFinish(value);
-                  if (dialogContext.mounted) {
-                    Navigator.of(dialogContext).pop();
-                  }
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  hintText: 'Spielname...',
-                ),
-                autofocus: true,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 50.0),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 135,
-                    height: 40,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        "Abbrechen",
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ),
-                  ),
-                  Spacer(),
-                  SizedBox(
-                    height: 40,
-                    width: 135,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      child: Text(
-                        "Fertig",
-                        style: Theme.of(context).textTheme.displaySmall,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    builder: (dialogContext) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        title: Text(title),
+        content: TextField(
+          autofocus: true,
+          onChanged: (value) => game = value,
+          onSubmitted: (value) async {
+            if (value.isEmpty) return;
+            await onFinish(value);
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'Spielname',
+          ),
         ),
-      ),
-    ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text(
+              'Abbrechen',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (game == null || game!.isEmpty) return;
+              await onFinish(game!);
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            child: const Text(
+              'Speichern',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      );
+    },
   );
 }

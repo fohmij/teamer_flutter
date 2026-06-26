@@ -29,76 +29,78 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-        appBar: AppBar(
-            title: Text(
-          appBarTitle,
-          style: Theme.of(context).textTheme.titleLarge,
-        )),
-        body: [
-          TeamSelectPage(),
-          StatsPage(),
-        ][currentPageIndex],
-        extendBody: true,
-        bottomNavigationBar: Stack(
-          children: <Widget>[
-            Container(
-              color: Colors.transparent,
-              child: NavigationBar(
-                destinations: [
-                  NavigationDestination(
-                    icon: Icon(
-                      Icons.group_outlined,
-                      color:
-                          currentPageIndex == 0 ? Colors.white : AppTheme.grey800,
-                    ),
-                    label: "Team",
-                    selectedIcon: Icon(
-                      Icons.group_outlined,
-                      color: Colors.white,
-                    ),
+      appBar: AppBar(
+        scrolledUnderElevation: 0, // Damit es die Farbe nicht änder wenn man die Playersliste nach unten Scrollt
+        backgroundColor: currentPageIndex == 0
+            ? (isDark
+                  ? AppTheme.navigationBarDark
+                  : AppTheme.navigationBarLight)
+            : (isDark
+                  ? AppTheme.backgroundColorDark
+                  : AppTheme.backgroundColorLight),
+        title: Text(appBarTitle, style: Theme.of(context).textTheme.titleLarge),
+      ),
+      body: [TeamSelectPage(), StatsPage()][currentPageIndex],
+      extendBody: true,
+      bottomNavigationBar: Stack(
+        children: <Widget>[
+          Container(
+            color: Colors.transparent,
+            child: NavigationBar(
+              destinations: [
+                NavigationDestination(
+                  icon: Icon(
+                    Icons.group_outlined,
+                    color: currentPageIndex == 0
+                        ? Colors.white
+                        : AppTheme.grey800,
                   ),
-                  NavigationDestination(
-                    icon: Icon(
-                      Icons.star_border,
-                      color:
-                          currentPageIndex == 1 ? Colors.white : AppTheme.grey800,
-                    ),
-                    label: "Stats",
-                    selectedIcon: Icon(
-                      Icons.star_border,
-                      color: Colors.white,
-                    ),
+                  label: "Team",
+                  selectedIcon: Icon(Icons.group_outlined, color: Colors.white),
+                ),
+                NavigationDestination(
+                  icon: Icon(
+                    Icons.star_border,
+                    color: currentPageIndex == 1
+                        ? Colors.white
+                        : AppTheme.grey800,
                   ),
-                ],
-                selectedIndex: currentPageIndex,
-                onDestinationSelected: (int index) {
-                  setState(() {
-                    currentPageIndex = index;
-                    updateAppBarTitle();
-                  });
-                },
-              ),
+                  label: "Stats",
+                  selectedIcon: Icon(Icons.star_border, color: Colors.white),
+                ),
+              ],
+              selectedIndex: currentPageIndex,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  currentPageIndex = index;
+                  updateAppBarTitle();
+                });
+              },
             ),
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  'Teamer',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 21,
-                    color: 
-                    Theme.of(context).brightness == Brightness.dark ? AppTheme.grey300 : AppTheme.grey600,
-                    fontStyle: FontStyle.italic,
-                  ),
+          ),
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                'Teamer',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 21,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.grey300
+                      : AppTheme.grey600,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),
-          ],
-        ));
+          ),
+        ],
+      ),
+    );
   }
 }

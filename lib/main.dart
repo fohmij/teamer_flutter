@@ -11,13 +11,14 @@ import 'package:teamer/pages/all_games_page.dart';
 
 import 'package:teamer/app_theme/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // make navigation bar transparent
+
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      systemNavigationBarColor: Colors.transparent,
-    ),
+    const SystemUiOverlayStyle(systemNavigationBarColor: Colors.transparent),
   );
   // make flutter draw behind navigation bar
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -29,20 +30,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-       return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: HomePage(),
-        routes: {
-          '/eventpage': (context) => EventPage(),
-          '/coachingzonepage': (context) => CoachingZonePage(),
-          '/rules': (context) => RulesPage(),
-          '/exercises': (context) => ExercisesPage(),
-          '/team': (context) => TeamPage(),
-          '/all_stats': (context) => AllStatsPage(),
-          '/all_games': (context) => AllGamesPage(),
-        },
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-      );
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: HomePage(),
+      routes: {
+        '/eventpage': (context) => EventPage(),
+        '/coachingzonepage': (context) => CoachingZonePage(),
+        '/rules': (context) => RulesPage(),
+        '/exercises': (context) => ExercisesPage(),
+        '/team': (context) => TeamPage(),
+        '/all_stats': (context) => AllStatsPage(),
+        '/all_games': (context) => AllGamesPage(),
+      },
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+    );
   }
 }

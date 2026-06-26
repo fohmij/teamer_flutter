@@ -228,7 +228,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         hintStyle: TextStyle(
-          color: grey600,
+          color: grey400,
         ),
         enabledBorder: OutlineInputBorder(
           borderSide: BorderSide(
