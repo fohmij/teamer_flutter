@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,6 +40,14 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
   String? _rawText;
   XFile? _pickedImage;
   List<_ScanSuggestion> _suggestions = [];
+
+  void _toggleAllSuggestions(bool? value) {
+    setState(() {
+      for (final suggestion in _suggestions) {
+        suggestion.selected = value ?? false;
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -159,6 +167,10 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
 
     cleaned = cleaned.replaceAll(RegExp(r'^[@~]\s*'), '').trim();
 
+    if (cleaned.toLowerCase() == 'du') {
+      cleaned = 'Jan Bleeck';
+    }
+
     return cleaned;
   }
 
@@ -167,7 +179,8 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
 
     final lowerValue = value.toLowerCase();
     final blockedWords = [
-      'Ich',
+      'ich',
+      'nicht',
       'bin',
       'da',
       'whatsapp',
@@ -239,8 +252,13 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
     });
 
     try {
+      // 1. Erst ALLE Spieler abwählen
+      await _databaseService.updateAllPlayersStatus(0);
+
+      // 2. Bestehende Scan-Spieler auswählen, neue Scan-Spieler hinzufügen
       for (final suggestion in selectedSuggestions) {
         final existingPlayer = suggestion.existingPlayer;
+
         if (existingPlayer != null) {
           await _databaseService.updatePlayerStatus(existingPlayer.id, 1);
         } else {
@@ -248,6 +266,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
         }
       }
 
+      // 3. Neu hinzugefügte Spieler danach ebenfalls auswählen
       final updatedPlayers = await _databaseService.getPlayers();
       final updatedPlayersByName = <String, Player>{
         for (final player in updatedPlayers)
@@ -255,12 +274,11 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
       };
 
       for (final suggestion in selectedSuggestions) {
-        if (suggestion.existingPlayer != null) continue;
-
-        final addedPlayer =
+        final player =
             updatedPlayersByName[_normalizeName(suggestion.displayName)];
-        if (addedPlayer != null) {
-          await _databaseService.updatePlayerStatus(addedPlayer.id, 1);
+
+        if (player != null) {
+          await _databaseService.updatePlayerStatus(player.id, 1);
         }
       }
 
@@ -376,7 +394,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
                   context,
                 ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
               ),
-              SizedBox(height: 6,)
+              SizedBox(height: 6),
             ],
           ),
         ),
@@ -534,11 +552,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
           runSpacing: 8,
           children: [
             _ScanSummaryChip(
-              icon: Icons.check_circle,
-              label: '${selectedSuggestions.length}/${_suggestions.length}',
-            ),
-            _ScanSummaryChip(
-              icon: Icons.person_search,
+              icon: Symbols.database,
               label: '$selectedExistingCount/$allExistingCount',
             ),
             _ScanSummaryChip(
@@ -548,8 +562,43 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
           ],
         ),
         const SizedBox(height: 16),
-        Text('Vorschlag', style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Vorschlag', style: Theme.of(context).textTheme.bodyLarge),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.group_outlined,
+                  color: AppTheme.grey600,
+                  size: 18.0,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${selectedSuggestions.length}/${_suggestions.length}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight(600),
+                    color: AppTheme.grey600,
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 20.0),
+              child: Checkbox(
+                value:
+                    _suggestions.isNotEmpty &&
+                    _suggestions.every((suggestion) => suggestion.selected),
+                activeColor: AppTheme.btnBlue2,
+                checkColor: Colors.white,
+                side: const BorderSide(color: AppTheme.grey600, width: 2),
+                onChanged: _applying ? null : _toggleAllSuggestions,
+              ),
+            ),
+          ],
+        ),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: ListView.separated(
@@ -634,8 +683,8 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
                 });
               },
         secondary: Icon(
-          existingPlayer == null ? Icons.person_add_alt_1 : Icons.person_search,
-          color: AppTheme.secondaryBlue,
+          existingPlayer == null ? Icons.person_add_alt_1 : Symbols.database,
+          color: isDark ? AppTheme.btnBlue2 : AppTheme.secondaryBlue,
         ),
         title: Text(
           suggestion.displayName,
@@ -650,7 +699,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 20),
       child: Row(
         children: [
           Expanded(
@@ -737,12 +786,18 @@ class _ScanSummaryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Chip(
-      avatar: Icon(icon, size: 18, color: isDark ? AppTheme.secondaryBlue : Colors.white),
+      avatar: Icon(
+        icon,
+        size: 18,
+        color: isDark ? AppTheme.btnBlue2 : Colors.white,
+      ),
       label: Text(label),
       labelStyle: TextStyle(fontSize: 14, color: Colors.white),
-      backgroundColor: isDark ? Theme.of(context).cardColor.withValues(alpha: 0.65) : AppTheme.primaryBlue,
+      backgroundColor: isDark
+          ? Theme.of(context).cardColor.withValues(alpha: 0.65)
+          : AppTheme.primaryBlue,
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     );
