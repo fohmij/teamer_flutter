@@ -507,76 +507,19 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     }
   }
 
-  void _showEditPlayerDialog(Player player) {
-    final controller = TextEditingController(text: player.name);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog(
+  Future<void> _showEditPlayerDialog(Player player) async {
+    final newName = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-        ),
-        title: Text(
-          'Spieler bearbeiten',
-          style: Theme.of(context).textTheme.displayLarge,
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: Theme.of(context).textTheme.bodyMedium,
-          decoration: const InputDecoration(
-            hintText: 'Name...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          SizedBox(
-            width: 135,
-            height: 40,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
-                side: BorderSide(
-                  color: isDark ? Colors.transparent : AppTheme.grey300,
-                ),
-              ),
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(
-                'Abbrechen',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: 135,
-            height: 40,
-            child: TextButton(
-              onPressed: () async {
-                final name = controller.text.trim();
-
-                if (name.isNotEmpty) {
-                  await _databaseService.updatePlayerName(player.id, name);
-
-                  setState(() {
-                    _playersFuture = _databaseService.getPlayers();
-                  });
-                }
-
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: Text(
-                'Speichern',
-                style: Theme.of(context).textTheme.displaySmall,
-              ),
-            ),
-          ),
-        ],
-      ),
+      builder: (_) => _RenamePlayerDialog(initialName: player.name),
     );
+
+    if (newName == null) return;
+
+    await _databaseService.updatePlayerName(player.id, newName);
+
+    setState(() {
+      _playersFuture = _databaseService.getPlayers();
+    });
   }
 
   void _showPlayerSelectionToast(String message) {
@@ -998,6 +941,113 @@ class _RevealFloatingActionButtonState
           ),
         );
       },
+    );
+  }
+}
+
+class _RenamePlayerDialog extends StatefulWidget {
+  const _RenamePlayerDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_RenamePlayerDialog> createState() => _RenamePlayerDialogState();
+}
+
+class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = TextEditingController(text: widget.initialName);
+
+    _controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: widget.initialName.length,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final newName = _controller.text.trim();
+
+    if (newName.isEmpty) return;
+
+    Navigator.of(context).pop(newName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: isDark ? AppTheme.grey700 : Colors.white),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+      ),
+      title: Text(
+        'Spieler bearbeiten',
+        style: Theme.of(context).textTheme.displayLarge,
+      ),
+      content: SizedBox(
+        width: 560,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          style: Theme.of(context).textTheme.bodyMedium,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            hintText: 'Name...',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (_) => _submit(),
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      actions: [
+        Row(
+          children: [
+            SizedBox(
+              height: 40,
+              width: 135,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+                  foregroundColor: Colors.white,
+                  side: BorderSide(
+                    color: isDark ? Colors.transparent : AppTheme.grey300,
+                    width: 1,
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Abbrechen',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              height: 40,
+              width: 135,
+              child: TextButton(
+                onPressed: _submit,
+                child: Text(
+                  'Speichern',
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
