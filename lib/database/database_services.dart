@@ -87,6 +87,17 @@ class DatabaseService {
     await db.delete(_gamesTableName);
   }
 
+  Future<void> updatePlayerName(int id, String name) async {
+    final db = await database;
+
+    await db.update(
+      'players',
+      {'name': name},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<int> getItemCount() async {
     final db = await database;
     final result = await db.rawQuery(
@@ -149,20 +160,29 @@ class DatabaseService {
     return players;
   }
 
-Future<List<Game>> getGames() async {
-  final db = await database;
-  final data = await db.query(_gamesTableName, orderBy: "$_gamesNameColumnName COLLATE NOCASE");
+  Future<List<Game>> getGames() async {
+    final db = await database;
+    final data = await db.query(
+      _gamesTableName,
+      orderBy: "$_gamesNameColumnName COLLATE NOCASE",
+    );
 
-  List<Game> games = [];
-  for (var e in data) {
-    final teamANames = await teamIDs2Names(e[_gamesTeamAColumnName] as String);
-    final teamBNames = await teamIDs2Names(e[_gamesTeamBColumnName] as String);
+    List<Game> games = [];
+    for (var e in data) {
+      final teamANames = await teamIDs2Names(
+        e[_gamesTeamAColumnName] as String,
+      );
+      final teamBNames = await teamIDs2Names(
+        e[_gamesTeamBColumnName] as String,
+      );
 
-    games.add(Game.fromMap(e, teamANames: teamANames, teamBNames: teamBNames));
+      games.add(
+        Game.fromMap(e, teamANames: teamANames, teamBNames: teamBNames),
+      );
+    }
+
+    return games;
   }
-
-  return games;
-}
 
   Future<void> updatePlayerStatus(int id, int status) async {
     final db = await database;

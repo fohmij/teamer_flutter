@@ -29,7 +29,7 @@ class _StatsPageState extends State<StatsPage> {
                     Expanded(
                         child: SizedBox(
                       height: 120,
-                      child: statsCard("Beste \nSpieler", Icons.sports_hockey),
+                      child: statsCard("Street\nFloorball", Icons.event),
                     )),
                     SizedBox(
                       width: 20,
@@ -66,6 +66,9 @@ class _StatsPageState extends State<StatsPage> {
     return Card(
       color: statsCardColor ?? Theme.of(context).cardColor,
       elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.circular(4)
+      ),
       child: Stack(children: <Widget>[
         Padding(
           padding: const EdgeInsets.only(top: 15, left: 15),
@@ -109,6 +112,9 @@ class _StatsPageState extends State<StatsPage> {
     return Card(
       color: statsCardColor ,
       elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.circular(4)
+      ),
       child: Stack(children: <Widget>[
         Padding(
           padding: const EdgeInsets.only(top: 15, left: 15),
@@ -159,7 +165,7 @@ class _StatsPageState extends State<StatsPage> {
             height: 300,
             width: 400,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(4),
               child: Image.asset('assets/pictures/Hannover2026.png',
                   fit: BoxFit.cover),
             ),

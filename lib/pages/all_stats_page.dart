@@ -17,6 +17,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
   int? _sortColumnIndex;
   bool _sortAscending = true;
   bool _loading = true;
+  bool _hideZeroAttendance = true;
   List<Player> _players = [];
   int _gamesCount = 0;
 
@@ -153,7 +154,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
   Widget _buildStatsContent() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double nameColumnWidth = (constraints.maxWidth * 0.29)
+        final double nameColumnWidth = (constraints.maxWidth * 0.5)
             .clamp(92.0, 150.0)
             .toDouble();
 
@@ -162,7 +163,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
           child: Column(
             children: [
               _buildSummaryCard(),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
+              _buildAttendanceToggle(),
+              const SizedBox(height: 12),
               Expanded(child: _buildTableCard(nameColumnWidth)),
               const SizedBox(height: 6),
             ],
@@ -216,7 +219,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     Text(
-                      'Übersicht, Bestenliste, Stats',
+                      'Übersicht, Sortieren, Vergleichen',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(
@@ -255,15 +258,97 @@ class _AllStatsPageState extends State<AllStatsPage> {
     );
   }
 
+  Widget _buildAttendanceToggle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hiddenPlayersCount = _players.where((p) => p.attendance == 0).length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.navigationBarDark : Colors.white,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.visibility_off_outlined,
+            size: 20,
+            color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  'Nur mit A > 0',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(width: 18),
+                Text(
+                  '$hiddenPlayersCount Spieler betroffen',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontSize: 13,
+                    color: AppTheme.grey600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.8,
+            child: Switch(
+              value: _hideZeroAttendance,
+              activeThumbColor: AppTheme.cardColorLight,
+              activeTrackColor: AppTheme.primaryBlue,
+              onChanged: (value) {
+                setState(() {
+                  _hideZeroAttendance = value;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableCard(double nameColumnWidth) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final visiblePlayers = _hideZeroAttendance
+        ? _players.where((player) => player.attendance > 0).toList()
+        : _players;
+
+    if (visiblePlayers.isEmpty) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.navigationBarDark : Colors.white,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Keine Spieler mit Anwesenheit über 0',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ),
+      );
+    }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: isDark ? AppTheme.navigationBarDark : Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: DataTable2(
           fixedTopRows: 1,
@@ -277,12 +362,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
           ),
           dividerThickness: 0.7,
           columnSpacing: 1,
-          horizontalMargin: 12,
+          horizontalMargin: 15,
           dataRowHeight: 56,
           columns: [
             DataColumn2(
               label: const Text('Name'),
-              fixedWidth: 156,
+              fixedWidth: nameColumnWidth,
               onSort: (i, asc) => _sort((p) => p.name.toLowerCase(), i, asc),
             ),
             DataColumn2(
@@ -321,14 +406,14 @@ class _AllStatsPageState extends State<AllStatsPage> {
               onSort: (i, asc) => _sort((p) => p.winRate, i, asc),
             ),
           ],
-          rows: _players.map((player) {
+          rows: visiblePlayers.map((player) {
             final int draws = player.attendance - (player.wins + player.losses);
 
             return DataRow(
               cells: [
                 DataCell(
                   SizedBox(
-                    width: 160,
+                    width: nameColumnWidth,
                     child: Text(
                       player.name,
                       maxLines: 1,

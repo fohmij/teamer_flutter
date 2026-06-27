@@ -59,9 +59,9 @@ class _TeamPageState extends State<TeamPage> {
 
         if (!context.mounted) return;
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(title)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Spiel \'$gameName\' gespeichert')),
+        );
 
         Navigator.of(context).pop();
       },
@@ -71,15 +71,18 @@ class _TeamPageState extends State<TeamPage> {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text('Teams'),
         titleTextStyle: Theme.of(context).textTheme.titleLarge,
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
-        backgroundColor: backgroundColor,
+        backgroundColor: isDark
+            ? AppTheme.navigationBarDark
+            : AppTheme.navigationBarLight,
       ),
       body: SafeArea(
         child: FutureBuilder<List<Player>>(
@@ -101,10 +104,9 @@ class _TeamPageState extends State<TeamPage> {
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  padding: const EdgeInsets.fromLTRB(36, 20, 36, 14),
                   child: _HeaderInfo(playerCount: teamA.length + teamB.length),
                 ),
-
                 Expanded(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -115,8 +117,8 @@ class _TeamPageState extends State<TeamPage> {
                           players: teamA,
                           color: AppTheme.btnBlue3,
                           borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
+                            topRight: Radius.circular(4),
+                            bottomRight: Radius.circular(4),
                           ),
                         ),
                       ),
@@ -127,8 +129,8 @@ class _TeamPageState extends State<TeamPage> {
                           players: teamB,
                           color: AppTheme.btnBlue2,
                           borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            bottomLeft: Radius.circular(20),
+                            topLeft: Radius.circular(4),
+                            bottomLeft: Radius.circular(4),
                           ),
                         ),
                       ),
@@ -267,9 +269,18 @@ class _HeaderInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Expanded(
+          child: Divider(
+            thickness: 1,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey
+                : AppTheme.grey600,
+          ),
+        ),
+        SizedBox(width: 10,), 
         Icon(
           Icons.group_outlined,
           color: Theme.of(context).brightness == Brightness.dark
@@ -285,7 +296,16 @@ class _HeaderInfo extends StatelessWidget {
                 ? Colors.grey
                 : AppTheme.grey600,
             fontWeight: FontWeight.w500,
-            fontSize: 14,
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(width: 10,), 
+        Expanded(
+          child: Divider(
+            thickness: 1,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey
+                : AppTheme.grey600,
           ),
         ),
       ],
@@ -438,9 +458,7 @@ class _ResultButton extends StatelessWidget {
         style: TextButton.styleFrom(
           backgroundColor: color,
           foregroundColor: color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),

@@ -121,7 +121,12 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                         child: statsCard(
                           "Schul-\nRegelwerk",
                           Icons.sports,
-                          statsCardColor: const Color.fromARGB(255, 236, 21, 21),//Color.fromARGB(255, 221, 2, 56),
+                          statsCardColor: const Color.fromARGB(
+                            255,
+                            236,
+                            21,
+                            21,
+                          ), //Color.fromARGB(255, 221, 2, 56),
                           fontAndIconColor: Colors.white,
                           page: '/rules',
                         ),
@@ -171,6 +176,9 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
     return Card(
       color: statsCardColor ?? Theme.of(context).cardColor,
       elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.circular(4),
+      ),
       child: Stack(
         children: <Widget>[
           Padding(
@@ -219,6 +227,9 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
     return Card(
       color: linkCardColor,
       elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.circular(4),
+      ),
       child: Stack(
         children: <Widget>[
           Padding(
@@ -266,6 +277,9 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
     return Card(
       color: dialogCardColor,
       elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.circular(4),
+      ),
       child: Stack(
         children: <Widget>[
           Padding(

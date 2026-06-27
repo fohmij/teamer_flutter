@@ -198,8 +198,21 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
               backgroundColor: AppTheme.deleteRed,
               onPressed: (_) => _showDeletePlayerDialog(player),
               icon: Icons.delete,
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(4),
               foregroundColor: Colors.white,
+            ),
+          ],
+        ),
+        endActionPane: ActionPane(
+          extentRatio: 0.2,
+          motion: const StretchMotion(),
+          children: [
+            SlidableAction(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              icon: Icons.edit,
+              borderRadius: BorderRadius.circular(4),
+              onPressed: (_) => _showEditPlayerDialog(player),
             ),
           ],
         ),
@@ -446,17 +459,19 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
         children: [
           _RevealFloatingActionButton(
             key: const ValueKey('playerRevealFab'),
-            mainButton: _PlayerFloatingButton(onPressed: _showAddPlayerDialog),
-            revealedButton: _ScanFloatingButton(onPressed: _scanPlayers),
+            mainButton: _ScanFloatingButton(onPressed: _scanPlayers),
+            revealedButton: _PlayerFloatingButton(
+              onPressed: _showAddPlayerDialog,
+            ),
           ),
           const SizedBox(height: 20, width: 150),
           _RevealFloatingActionButton(
             key: const ValueKey('teamRevealFab'),
-            mainButton: _RandomTeamFloatingButton(
-              onPressed: () => _randomTeam(enoughPlayers),
-            ),
-            revealedButton: _BalancedTeamFloatingButton(
+            mainButton: _BalancedTeamFloatingButton(
               onPressed: () => _optimizedTeam(enoughPlayers, notTooManyPlayers),
+            ),
+            revealedButton: _RandomTeamFloatingButton(
+              onPressed: () => _randomTeam(enoughPlayers),
             ),
           ),
           const SizedBox(height: 110, width: 150),
@@ -490,6 +505,78 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     } else {
       _showPlayerSelectionToast('Bitte 2-20 Spieler auswählen');
     }
+  }
+
+  void _showEditPlayerDialog(Player player) {
+    final controller = TextEditingController(text: player.name);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        title: Text(
+          'Spieler bearbeiten',
+          style: Theme.of(context).textTheme.displayLarge,
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: Theme.of(context).textTheme.bodyMedium,
+          decoration: const InputDecoration(
+            hintText: 'Name...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: 135,
+            height: 40,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+                side: BorderSide(
+                  color: isDark ? Colors.transparent : AppTheme.grey300,
+                ),
+              ),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'Abbrechen',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: 135,
+            height: 40,
+            child: TextButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+
+                if (name.isNotEmpty) {
+                  await _databaseService.updatePlayerName(player.id, name);
+
+                  setState(() {
+                    _playersFuture = _databaseService.getPlayers();
+                  });
+                }
+
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
+              },
+              child: Text(
+                'Speichern',
+                style: Theme.of(context).textTheme.displaySmall,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPlayerSelectionToast(String message) {
@@ -643,6 +730,7 @@ class _PlayerFloatingButton extends StatelessWidget {
       height: 65,
       child: FloatingActionButton(
         onPressed: onPressed,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         backgroundColor: isDark ? AppTheme.btnBlue2 : AppTheme.btnBlue1,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -673,6 +761,7 @@ class _RandomTeamFloatingButton extends StatelessWidget {
       width: 65,
       height: 65,
       child: FloatingActionButton(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         heroTag: 'randomBtn',
         onPressed: onPressed,
         backgroundColor: AppTheme.btnBlue3,
@@ -701,6 +790,7 @@ class _BalancedTeamFloatingButton extends StatelessWidget {
       child: FloatingActionButton(
         heroTag: 'partitionBtn',
         backgroundColor: AppTheme.btnBlue3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         onPressed: onPressed,
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -726,6 +816,7 @@ class _ScanFloatingButton extends StatelessWidget {
       child: FloatingActionButton(
         heroTag: 'scanBtn',
         onPressed: onPressed,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         backgroundColor: isDark ? AppTheme.btnBlue2 : AppTheme.btnBlue1,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

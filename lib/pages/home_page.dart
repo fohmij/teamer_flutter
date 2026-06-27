@@ -49,6 +49,7 @@ class _HomePageState extends State<HomePage> {
           Container(
             color: Colors.transparent,
             child: NavigationBar(
+              indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               destinations: [
                 NavigationDestination(
                   icon: Icon(
