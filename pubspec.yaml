@@ -15,7 +15,7 @@ dependencies:
   provider: ^6.0.0
   flutter_slidable: ^3.1.2
   url_launcher: ^6.1.8
-  flutter_pdfview: ^1.4.0
+  syncfusion_flutter_pdfviewer: ^33.2.6
   material_design_icons_flutter: ^7.0.7296
   material_symbols_icons: ^4.2873.0
   cupertino_icons: ^1.0.8
