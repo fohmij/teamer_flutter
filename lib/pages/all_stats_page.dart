@@ -3,6 +3,7 @@ import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/database/database_services.dart';
 import 'package:teamer/database/player.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'package:teamer/services/app_settings_controller.dart';
 
 class AllStatsPage extends StatefulWidget {
   const AllStatsPage({super.key});
@@ -14,10 +15,10 @@ class AllStatsPage extends StatefulWidget {
 class _AllStatsPageState extends State<AllStatsPage> {
   final DatabaseService _databaseService = DatabaseService.instance;
 
-  int? _sortColumnIndex;
-  bool _sortAscending = true;
+  int? _sortColumnIndex = 5;
+  bool _sortAscending = false;
   bool _loading = true;
-  bool _hideZeroAttendance = true;
+  bool _hideBelowMinGames = true;
   bool _legendExpanded = false;
   List<Player> _players = [];
   int _gamesCount = 0;
@@ -31,11 +32,15 @@ class _AllStatsPageState extends State<AllStatsPage> {
   Future<void> _loadPlayers() async {
     final players = await _databaseService.getPlayersWithStatsFromGames();
     final games = await _databaseService.getGames();
+    players.sort((a, b) => Comparable.compare(b.winRate, a.winRate));
 
     if (!mounted) return;
     setState(() {
       _players = players;
       _gamesCount = games.length;
+      _sortColumnIndex = 5;
+      _sortAscending = false;
+      _hideBelowMinGames = true;
       _loading = false;
     });
   }
@@ -56,6 +61,53 @@ class _AllStatsPageState extends State<AllStatsPage> {
       _sortColumnIndex = columnIndex;
       _sortAscending = ascending;
     });
+  }
+
+  Future<void> _resetStats() async {
+    setState(() {
+      _loading = true;
+    });
+
+    await _databaseService.resetStats();
+    await _loadPlayers();
+  }
+
+  void _showResetStatsDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8.0)),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _ResetStatsDialogTitle(),
+            const Padding(padding: EdgeInsets.only(top: 6.0), child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 30.0),
+              child: Text(
+                'Sollen wirklich alle Statistiken zurückgesetzt werden?',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12.0),
+              child: Divider(),
+            ),
+            _ResetStatsDialogActions(
+              onCancel: () {
+                Navigator.pop(context);
+              },
+              onReset: () async {
+                Navigator.pop(context);
+                await _resetStats();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -106,30 +158,40 @@ class _AllStatsPageState extends State<AllStatsPage> {
   }
 
   Widget _buildStatsContent() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double nameColumnWidth = (constraints.maxWidth * 0.5)
-            .clamp(92.0, 150.0)
-            .toDouble();
+    return ValueListenableBuilder(
+      valueListenable: appSettingsController,
+      builder: (context, settings, _) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final double nameColumnWidth = (constraints.maxWidth * 0.5)
+                .clamp(92.0, 150.0)
+                .toDouble();
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-          child: Column(
-            children: [
-              _buildSummaryCard(),
-              const SizedBox(height: 12),
-              _buildAttendanceToggle(),
-              const SizedBox(height: 12),
-              Expanded(child: _buildTableCard(nameColumnWidth)),
-              const SizedBox(height: 6),
-            ],
-          ),
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+              child: Column(
+                children: [
+                  _buildSummaryCard(settings.minGamesForFullWeight),
+                  const SizedBox(height: 12),
+                  _buildGamesLimitToggle(settings.minGamesForFullWeight),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: _buildTableCard(
+                      nameColumnWidth,
+                      settings.minGamesForFullWeight,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildSummaryCard() {
+  Widget _buildSummaryCard(int minGamesLimit) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final totalAttendance = _players.fold<int>(
       0,
@@ -173,7 +235,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     Text(
-                      'Übersicht, Sortieren, Vergleichen',
+                      'Default: WR/% absteigend, Filter nach Mindestspielen',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(
@@ -193,15 +255,10 @@ class _AllStatsPageState extends State<AllStatsPage> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _StatsChip(
-                    label: 'Spieler',
-                    value: _players.length.toString(),
-                  ),
-                  _StatsChip(
-                    label: 'Ø Anw.',
-                    value: averageAttendance.toStringAsFixed(1),
-                  ),
+                  _StatsChip(label: 'Spieler', value: _players.length.toString()),
+                  _StatsChip(label: 'Ø S', value: averageAttendance.toStringAsFixed(1)),
                   _StatsChip(label: 'Spiele', value: _gamesCount.toString()),
+                  _StatsChip(label: 'Limit', value: minGamesLimit.toString()),
                 ],
               ),
               // _buildResetButton(),
@@ -212,9 +269,11 @@ class _AllStatsPageState extends State<AllStatsPage> {
     );
   }
 
-  Widget _buildAttendanceToggle() {
+  Widget _buildGamesLimitToggle(int minGamesLimit) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hiddenPlayersCount = _players.where((p) => p.attendance == 0).length;
+    final hiddenPlayersCount = _players
+        .where((p) => p.attendance < minGamesLimit)
+        .length;
 
     return Material(
       color: Colors.transparent,
@@ -237,7 +296,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
               Row(
                 children: [
                   Icon(
-                    Icons.visibility_off_outlined,
+                    Icons.filter_alt_outlined,
                     size: 20,
                     color: isDark ? AppTheme.grey300 : AppTheme.grey700,
                   ),
@@ -247,7 +306,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Text(
-                          'Nur mit S > 0',
+                          'Nur mit S ≥ $minGamesLimit',
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 fontSize: 13,
@@ -272,12 +331,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
                   Transform.scale(
                     scale: 0.8,
                     child: Switch(
-                      value: _hideZeroAttendance,
+                      value: _hideBelowMinGames,
                       activeThumbColor: AppTheme.cardColorLight,
                       activeTrackColor: AppTheme.primaryBlue,
                       onChanged: (value) {
                         setState(() {
-                          _hideZeroAttendance = value;
+                          _hideBelowMinGames = value;
                         });
                       },
                     ),
@@ -325,15 +384,15 @@ class _AllStatsPageState extends State<AllStatsPage> {
           Padding(
             padding: const EdgeInsets.only(left: 8.0),
             child: Row(
-              children: [
+              children: const [
                 Text(
                   'W:\nL:\nD:\nS:\n%:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight(600)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
-                SizedBox(width: 10,),
+                SizedBox(width: 10),
                 Text(
                   'Siege\nNiederlagen\nUnentschieden\nSpiele\nSiegquote in Prozent',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight(300)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w300),
                 ),
               ],
             ),
@@ -343,10 +402,10 @@ class _AllStatsPageState extends State<AllStatsPage> {
     );
   }
 
-  Widget _buildTableCard(double nameColumnWidth) {
+  Widget _buildTableCard(double nameColumnWidth, int minGamesLimit) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final visiblePlayers = _hideZeroAttendance
-        ? _players.where((player) => player.attendance > 0).toList()
+    final visiblePlayers = _hideBelowMinGames
+        ? _players.where((player) => player.attendance >= minGamesLimit).toList()
         : _players;
     final isEmptyColor = isDark ? AppTheme.grey600 : AppTheme.grey400;
 
@@ -362,20 +421,20 @@ class _AllStatsPageState extends State<AllStatsPage> {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                SizedBox(height: 120),
+                const SizedBox(height: 120),
                 Icon(Icons.info_outline, size: 35, color: isEmptyColor),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Keine Spieler mit',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: isEmptyColor),
                 ),
                 Text(
-                  'Anwesenheit > 0',
+                  'S ≥ $minGamesLimit',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: isEmptyColor,
-                    fontWeight: FontWeight(700),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -460,11 +519,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                       player.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      softWrap: false,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ),
                 ),
@@ -472,11 +527,28 @@ class _AllStatsPageState extends State<AllStatsPage> {
                 DataCell(_StatText(player.losses.toString())),
                 DataCell(_StatText(draws.toString())),
                 DataCell(_StatText(player.attendance.toString())),
-                DataCell(_StatText((player.winRate * 100).toStringAsFixed(1))),
+                DataCell(
+                  _StatText((player.winRate * 100).toStringAsFixed(1)),
+                ),
               ],
             );
           }).toList(),
         ),
+      ),
+    );
+  }
+
+  Widget _buildResetButton() {
+    return SizedBox(
+      height: 38,
+      width: 38,
+      child: IconButton(
+        style: TextButton.styleFrom(
+          backgroundColor: AppTheme.deleteRed,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        onPressed: _showResetStatsDialog,
+        icon: const Icon(Icons.delete, color: Colors.white, size: 20),
       ),
     );
   }
@@ -541,6 +613,79 @@ class _StatText extends StatelessWidget {
         fontSize: 15,
         fontWeight: FontWeight.w300,
       ),
+    );
+  }
+}
+
+class _ResetStatsDialogTitle extends StatelessWidget {
+  const _ResetStatsDialogTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 2.0),
+            child: Icon(Icons.warning, size: 25.0),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0),
+            child: Text(
+              'Stats zurücksetzen',
+              style: Theme.of(context).textTheme.displayLarge,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResetStatsDialogActions extends StatelessWidget {
+  final VoidCallback onCancel;
+  final Future<void> Function() onReset;
+
+  const _ResetStatsDialogActions({required this.onCancel, required this.onReset});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      children: [
+        SizedBox(
+          height: 40,
+          width: 135,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+              foregroundColor: Colors.white,
+              side: BorderSide.none,
+            ),
+            onPressed: onCancel,
+            child: Text(
+              'Abbrechen',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        ),
+        const Spacer(),
+        SizedBox(
+          height: 40,
+          width: 135,
+          child: TextButton(
+            style: TextButton.styleFrom(backgroundColor: AppTheme.deleteRed),
+            onPressed: onReset,
+            child: Text(
+              'Zurücksetzen',
+              style: Theme.of(context).textTheme.displaySmall,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

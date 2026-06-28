@@ -263,7 +263,7 @@ class _TeamAnalysisCard extends StatelessWidget {
                                 ),
                           ),
                           Text(
-                            'A: ${player.attendance} | echte WR: ${(player.winRate * 100).toStringAsFixed(1)}%',
+                            'S: ${player.attendance} | echte WR: ${(player.winRate * 100).toStringAsFixed(1)}%',
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: AppTheme.grey600,

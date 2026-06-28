@@ -52,3 +52,14 @@ To generate the fairest teams possible, the **partition problem** is solved usin
 
 The goal is to minimize the difference between the average win rates of the teams.  
 This way, teams with up to **20 people** can be optimally divided. 👥👥
+
+### Flutter Install
+Apk bauen
+```
+flutter build apk --release --no-tree-shake-icons
+```
+
+Installieren
+```
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
