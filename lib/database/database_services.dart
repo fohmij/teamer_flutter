@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:teamer/database/player.dart';
 import 'package:teamer/database/team_generator.dart';
 import 'package:teamer/database/game.dart';
+import 'package:teamer/services/app_settings_service.dart';
 
 class DatabaseService {
   static Database? _db;
@@ -91,7 +92,7 @@ class DatabaseService {
     final db = await database;
 
     await db.update(
-      'players',
+      _playersTableName,
       {'name': name},
       where: 'id = ?',
       whereArgs: [id],
@@ -464,12 +465,16 @@ class DatabaseService {
 
     if (activePlayers.isEmpty) return;
 
-    TeamSplitResult result = splitPlayersByWinRate(activePlayers);
+    final settings = await AppSettingsService.instance.getSettings();
+    TeamSplitResult result = splitPlayersByWinRate(
+      activePlayers,
+      minGamesForFullWeight: settings.minGamesForFullWeight,
+    );
 
     final db = await database;
 
     await db.transaction((txn) async {
-      for (Player player in result.teamA) {
+      for (Player player in result.playersTeamA) {
         await txn.update(
           _playersTableName,
           {_playersTeamColumnName: 0},
@@ -477,7 +482,7 @@ class DatabaseService {
           whereArgs: [player.id],
         );
       }
-      for (Player player in result.teamB) {
+      for (Player player in result.playersTeamB) {
         await txn.update(
           _playersTableName,
           {_playersTeamColumnName: 1},
@@ -486,6 +491,22 @@ class DatabaseService {
         );
       }
     });
+  }
+
+
+  Future<TeamSplitResult> getOptimizedTeamPreview() async {
+    final settings = await AppSettingsService.instance.getSettings();
+    final players = await getPlayersWithStatsFromGames();
+    final activePlayers = players.where((p) => p.status == 1).toList();
+
+    if (activePlayers.isEmpty) {
+      return TeamSplitResult(teamA: [], teamB: []);
+    }
+
+    return splitPlayersByWinRate(
+      activePlayers,
+      minGamesForFullWeight: settings.minGamesForFullWeight,
+    );
   }
 
   Future<double> getWinRateDifference() async {

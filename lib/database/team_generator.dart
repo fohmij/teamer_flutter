@@ -1,28 +1,67 @@
 import 'player.dart';
 
-class TeamSplitResult {
-  final List<Player> teamA;
-  final List<Player> teamB;
+class WeightedPlayer {
+  final Player player;
+  final double effectiveWinRate;
+  final bool usesFallbackWeight;
 
-  TeamSplitResult({required this.teamA, required this.teamB});
+  const WeightedPlayer({
+    required this.player,
+    required this.effectiveWinRate,
+    required this.usesFallbackWeight,
+  });
 }
 
-TeamSplitResult splitPlayersByWinRate(List<Player> players) {
-  int n = players.length;
+class TeamSplitResult {
+  final List<WeightedPlayer> teamA;
+  final List<WeightedPlayer> teamB;
+
+  TeamSplitResult({required this.teamA, required this.teamB});
+
+  List<Player> get playersTeamA => teamA.map((p) => p.player).toList();
+  List<Player> get playersTeamB => teamB.map((p) => p.player).toList();
+
+  double get averageTeamA => _average(teamA);
+  double get averageTeamB => _average(teamB);
+  double get difference => (averageTeamA - averageTeamB).abs();
+
+  static double _average(List<WeightedPlayer> players) {
+    if (players.isEmpty) return 0.0;
+    return players.map((p) => p.effectiveWinRate).reduce((a, b) => a + b) /
+        players.length;
+  }
+}
+
+TeamSplitResult splitPlayersByWinRate(
+  List<Player> players, {
+  required int minGamesForFullWeight,
+}) {
+  final weightedPlayers = players
+      .map(
+        (player) => WeightedPlayer(
+          player: player,
+          effectiveWinRate: player.attendance < minGamesForFullWeight
+              ? 0.5
+              : player.winRate,
+          usesFallbackWeight: player.attendance < minGamesForFullWeight,
+        ),
+      )
+      .toList();
+
+  int n = weightedPlayers.length;
   if (n == 0) {
     return TeamSplitResult(teamA: [], teamB: []);
   }
 
   double bestDiff = double.infinity;
-  List<Player> bestA = [];
-  List<Player> bestB = [];
+  List<WeightedPlayer> bestA = [];
+  List<WeightedPlayer> bestB = [];
 
   int start = n ~/ 2;
-  int end = 1 << (n - 1); // 2^(n-1)
+  int end = 1 << (n - 1);
 
   for (int mask = start; mask < end; mask++) {
-    // Anzahl der 1en im Bitmuster
-    int ones = mask.toRadixString(2).replaceAll("0", "").length;
+    int ones = mask.toRadixString(2).replaceAll('0', '').length;
 
     bool cond;
     if (n % 2 == 0) {
@@ -32,25 +71,19 @@ TeamSplitResult splitPlayersByWinRate(List<Player> players) {
     }
     if (!cond) continue;
 
-    List<Player> teamA = [];
-    List<Player> teamB = [];
+    List<WeightedPlayer> teamA = [];
+    List<WeightedPlayer> teamB = [];
 
     for (int i = 0; i < n; i++) {
       if ((mask >> i) & 1 == 1) {
-        teamA.add(players[i]);
+        teamA.add(weightedPlayers[i]);
       } else {
-        teamB.add(players[i]);
+        teamB.add(weightedPlayers[i]);
       }
     }
 
-    // Durchschnitt berechnen
-    double avgA = teamA.isEmpty
-        ? 0.0
-        : teamA.map((p) => p.winRate).reduce((a, b) => a + b) / teamA.length;
-    double avgB = teamB.isEmpty
-        ? 0.0
-        : teamB.map((p) => p.winRate).reduce((a, b) => a + b) / teamB.length;
-
+    double avgA = TeamSplitResult._average(teamA);
+    double avgB = TeamSplitResult._average(teamB);
     double diff = (avgA - avgB).abs();
 
     if (diff < bestDiff) {

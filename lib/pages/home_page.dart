@@ -41,6 +41,18 @@ class _HomePageState extends State<HomePage> {
                   ? AppTheme.backgroundColorDark
                   : AppTheme.backgroundColorLight),
         title: Text(appBarTitle, style: Theme.of(context).textTheme.titleLarge),
+        actions: currentPageIndex == 1
+            ? [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: IconButton(
+                    tooltip: 'Einstellungen',
+                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+                    icon: const Icon(Icons.settings),
+                  ),
+                ),
+              ]
+            : null,
       ),
       body: [TeamSelectPage(), StatsPage()][currentPageIndex],
       extendBody: true,

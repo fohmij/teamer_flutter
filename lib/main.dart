@@ -8,6 +8,9 @@ import 'package:teamer/pages/rules_page.dart';
 import 'package:teamer/pages/team_page.dart';
 import 'package:teamer/pages/all_stats_page.dart';
 import 'package:teamer/pages/all_games_page.dart';
+import 'package:teamer/pages/settings_page.dart';
+import 'package:teamer/pages/team_analysis_page.dart';
+import 'package:teamer/services/app_settings_controller.dart';
 
 import 'package:teamer/app_theme/app_theme.dart';
 
@@ -22,7 +25,8 @@ void main() async {
   );
   // make flutter draw behind navigation bar
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  runApp(MyApp());
+  await appSettingsController.load();
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -30,7 +34,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ValueListenableBuilder(
+      valueListenable: appSettingsController,
+      builder: (context, settings, _) {
+        return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: HomePage(),
       routes: {
@@ -41,9 +48,14 @@ class MyApp extends StatelessWidget {
         '/team': (context) => TeamPage(),
         '/all_stats': (context) => AllStatsPage(),
         '/all_games': (context) => AllGamesPage(),
+        '/settings': (context) => SettingsPage(),
+        '/team_analysis': (context) => TeamAnalysisPage(),
       },
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
+      themeMode: appSettingsController.flutterThemeMode,
+        );
+      },
     );
   }
 }

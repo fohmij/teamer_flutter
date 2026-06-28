@@ -497,7 +497,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     if (enoughPlayers && notTooManyPlayers) {
       await _databaseService.optimizedTeam();
       if (!mounted) return;
-      Navigator.pushNamed(context, '/team').then((_) {
+      Navigator.pushNamed(context, '/team_analysis').then((_) {
         setState(() {
           _playersFuture = _databaseService.getPlayers();
         });
