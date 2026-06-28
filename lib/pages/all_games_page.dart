@@ -771,7 +771,7 @@ class _GamesSummaryCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(
                         context,
-                      ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
+                      ).textTheme.labelSmall?.copyWith(color: isDark ? AppTheme.grey400 : AppTheme.grey700),
                     ),
                   ],
                 ),

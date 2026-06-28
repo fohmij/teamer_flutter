@@ -116,12 +116,6 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
   }
 
   Future<void> _toggleAllPlayers(bool? value) async {
-    final players = await _databaseService.getPlayers();
-    if (value == true && players.length > _maxSelectedPlayers) {
-      _showPlayerSelectionToast('Bitte maximal $_maxSelectedPlayers Spieler auswählen');
-      return;
-    }
-
     final newStatus = value == true ? 1 : 0;
     await _databaseService.updateAllPlayersStatus(newStatus);
 
@@ -238,15 +232,6 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
   Future<void> _togglePlayer(Player player) async {
     final newStatus = player.status == 1 ? 0 : 1;
 
-    if (newStatus == 1) {
-      final players = await _databaseService.getPlayers();
-      final selectedCount = players.where((p) => p.status == 1).length;
-      if (selectedCount >= _maxSelectedPlayers) {
-        _showPlayerSelectionToast('Bitte maximal $_maxSelectedPlayers Spieler auswählen');
-        return;
-      }
-    }
-
     await _databaseService.updatePlayerStatus(player.id, newStatus);
     setState(() {
       _playersFuture = _databaseService.getPlayers();
@@ -256,25 +241,12 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
   Future<void> _setPlayerStatus(Player player, bool? value) async {
     final newStatus = value == true ? 1 : 0;
 
-    if (newStatus == 1 && player.status == 0) {
-      final currentPlayers = await _databaseService.getPlayers();
-      final selectedCount = currentPlayers.where((p) => p.status == 1).length;
-      if (selectedCount >= _maxSelectedPlayers) {
-        _showPlayerSelectionToast('Bitte maximal $_maxSelectedPlayers Spieler auswählen');
-        return;
-      }
-    }
-
     await _databaseService.updatePlayerStatus(player.id, newStatus);
     final players = await _databaseService.getPlayers();
 
     setState(() {
       _playersFuture = Future.value(players);
-      if (newStatus == 0 && allBtnSelected) {
-        allBtnSelected = false;
-      } else {
-        allBtnSelected = players.isNotEmpty && players.every((p) => p.status == 1);
-      }
+      allBtnSelected = players.isNotEmpty && players.every((p) => p.status == 1);
     });
   }
 
@@ -453,24 +425,20 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
       return;
     }
 
-    final selectedCount = await _selectedPlayersCount();
-    if (selectedCount > _maxSelectedPlayers) {
-      _showPlayerSelectionToast('Bitte maximal $_maxSelectedPlayers Spieler auswählen');
-      return;
-    }
-
     await _databaseService.randomTeams();
     if (!mounted) return;
     Navigator.pushNamed(context, '/team');
   }
 
   Future<void> _optimizedTeam(bool enoughPlayers, bool notTooManyPlayers) async {
-    if (!enoughPlayers) {
+    final selectedCount = await _selectedPlayersCount();
+
+    if (selectedCount < 2) {
       _showPlayerSelectionToast('Bitte min. 2 Spieler auswählen');
       return;
     }
 
-    if (!notTooManyPlayers) {
+    if (selectedCount > _maxSelectedPlayers) {
       _showPlayerSelectionToast('Bitte maximal $_maxSelectedPlayers Spieler auswählen');
       return;
     }

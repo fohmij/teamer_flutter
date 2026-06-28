@@ -235,12 +235,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     Text(
-                      'Default: WR/% absteigend, Filter nach Mindestspielen',
+                      'Übersicht, Sortieren, Filtern',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(
                         context,
-                      ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
+                      ).textTheme.labelSmall?.copyWith(color: isDark ? AppTheme.grey400 : AppTheme.grey700),
                     ),
                   ],
                 ),
@@ -255,10 +255,15 @@ class _AllStatsPageState extends State<AllStatsPage> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _StatsChip(label: 'Spieler', value: _players.length.toString()),
-                  _StatsChip(label: 'Ø S', value: averageAttendance.toStringAsFixed(1)),
+                  _StatsChip(
+                    label: 'Spieler',
+                    value: _players.length.toString(),
+                  ),
+                  _StatsChip(
+                    label: 'Ø Anw.(Ø S)',
+                    value: averageAttendance.toStringAsFixed(1),
+                  ),
                   _StatsChip(label: 'Spiele', value: _gamesCount.toString()),
-                  _StatsChip(label: 'Limit', value: minGamesLimit.toString()),
                 ],
               ),
               // _buildResetButton(),
@@ -290,6 +295,10 @@ class _AllStatsPageState extends State<AllStatsPage> {
           decoration: BoxDecoration(
             color: isDark ? AppTheme.navigationBarDark : Colors.white,
             borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isDark ? AppTheme.grey700 : AppTheme.grey300,
+              width: 1.0,
+            ),
           ),
           child: Column(
             children: [
@@ -313,7 +322,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
-                        const SizedBox(width: 18),
+                        const SizedBox(width: 15),
                         Flexible(
                           child: Text(
                             '$hiddenPlayersCount Spieler betroffen',
@@ -405,7 +414,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
   Widget _buildTableCard(double nameColumnWidth, int minGamesLimit) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final visiblePlayers = _hideBelowMinGames
-        ? _players.where((player) => player.attendance >= minGamesLimit).toList()
+        ? _players
+              .where((player) => player.attendance >= minGamesLimit)
+              .toList()
         : _players;
     final isEmptyColor = isDark ? AppTheme.grey600 : AppTheme.grey400;
 
@@ -527,9 +538,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                 DataCell(_StatText(player.losses.toString())),
                 DataCell(_StatText(draws.toString())),
                 DataCell(_StatText(player.attendance.toString())),
-                DataCell(
-                  _StatText((player.winRate * 100).toStringAsFixed(1)),
-                ),
+                DataCell(_StatText((player.winRate * 100).toStringAsFixed(1))),
               ],
             );
           }).toList(),
@@ -648,7 +657,10 @@ class _ResetStatsDialogActions extends StatelessWidget {
   final VoidCallback onCancel;
   final Future<void> Function() onReset;
 
-  const _ResetStatsDialogActions({required this.onCancel, required this.onReset});
+  const _ResetStatsDialogActions({
+    required this.onCancel,
+    required this.onReset,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -96,7 +96,7 @@ class _TeamPageState extends State<TeamPage> {
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(36, 20, 36, 14),
+                  padding: const EdgeInsets.fromLTRB(36, 20, 36, 20),
                   child: _HeaderInfo(playerCount: teamA.length + teamB.length),
                 ),
                 Expanded(
