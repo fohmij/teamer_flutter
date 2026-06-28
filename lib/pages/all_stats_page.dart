@@ -322,6 +322,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
     final visiblePlayers = _hideZeroAttendance
         ? _players.where((player) => player.attendance > 0).toList()
         : _players;
+    final isEmptyColor = isDark ? AppTheme.grey600 : AppTheme.grey400;
 
     if (visiblePlayers.isEmpty) {
       return Container(
@@ -333,10 +334,25 @@ class _AllStatsPageState extends State<AllStatsPage> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(
-              'Keine Spieler mit Anwesenheit über 0',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+            child: Column(
+              children: [
+                SizedBox(height: 120),
+                Icon(Icons.info_outline, size: 35, color: isEmptyColor),
+                SizedBox(height: 8),
+                Text(
+                  'Keine Spieler mit',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: isEmptyColor),
+                ),
+                Text(
+                  'Anwesenheit > 0',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isEmptyColor,
+                    fontWeight: FontWeight(700),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -430,9 +446,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                 DataCell(_StatText(player.losses.toString())),
                 DataCell(_StatText(draws.toString())),
                 DataCell(_StatText(player.attendance.toString())),
-                DataCell(
-                  _StatText((player.winRate * 100).toStringAsFixed(1)),
-                ),
+                DataCell(_StatText((player.winRate * 100).toStringAsFixed(1))),
               ],
             );
           }).toList(),

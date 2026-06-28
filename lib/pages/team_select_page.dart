@@ -225,7 +225,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
           child: ListTile(
             onTap: () => _togglePlayer(player),
             onLongPress: () =>
-                _showDeletePlayerDialog(player, showPlayerName: true),
+                _showEditPlayerDialog(player),
             title: Padding(
               padding: const EdgeInsets.only(left: 14.0),
               child: Text(
@@ -510,7 +510,13 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
   Future<void> _showEditPlayerDialog(Player player) async {
     final newName = await showDialog<String>(
       context: context,
-      builder: (_) => _RenamePlayerDialog(initialName: player.name),
+      builder: (_) => _RenamePlayerDialog(
+        initialName: player.name,
+        onDelete: () {
+          Navigator.of(context).pop();
+          _showDeletePlayerDialog(player, showPlayerName: true);
+        },
+      ),
     );
 
     if (newName == null) return;
@@ -946,9 +952,13 @@ class _RevealFloatingActionButtonState
 }
 
 class _RenamePlayerDialog extends StatefulWidget {
-  const _RenamePlayerDialog({required this.initialName});
+  const _RenamePlayerDialog({
+    required this.initialName,
+    required this.onDelete,
+  });
 
   final String initialName;
+  final VoidCallback onDelete;
 
   @override
   State<_RenamePlayerDialog> createState() => _RenamePlayerDialogState();
@@ -998,19 +1008,46 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
       ),
       content: SizedBox(
         width: 560,
-        child: TextField(
-          controller: _controller,
-          autofocus: true,
-          style: Theme.of(context).textTheme.bodyMedium,
-          textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            hintText: 'Name...',
-            border: OutlineInputBorder(),
-          ),
-          onSubmitted: (_) => _submit(),
+        height: 120,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(
+                  height: 38,
+                  width: 38,
+                  child: IconButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppTheme.deleteRed,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete, color: Colors.white, size: 20),
+                  ),
+                ),
+                SizedBox(width: 15,),
+                Text("Spieler löschen", style: TextStyle(color: isDark ? AppTheme.grey600 : AppTheme.grey700),)
+              ],
+            ),
+            SizedBox(height: 15,),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                hintText: 'Name...',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
         ),
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      actionsPadding: const EdgeInsets.fromLTRB(25, 0, 25, 20),
       actions: [
         Row(
           children: [
