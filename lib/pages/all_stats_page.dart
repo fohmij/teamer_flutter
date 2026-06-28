@@ -18,6 +18,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
   bool _sortAscending = true;
   bool _loading = true;
   bool _hideZeroAttendance = true;
+  bool _legendExpanded = false;
   List<Player> _players = [];
   int _gamesCount = 0;
 
@@ -215,54 +216,126 @@ class _AllStatsPageState extends State<AllStatsPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hiddenPlayersCount = _players.where((p) => p.attendance == 0).length;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.navigationBarDark : Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.visibility_off_outlined,
-            size: 20,
-            color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+        onTap: () {
+          setState(() {
+            _legendExpanded = !_legendExpanded;
+          });
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.navigationBarDark : Colors.white,
+            borderRadius: BorderRadius.circular(4),
           ),
-          const SizedBox(width: 10),
-          Expanded(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.visibility_off_outlined,
+                    size: 20,
+                    color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Nur mit S > 0',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(width: 18),
+                        Flexible(
+                          child: Text(
+                            '$hiddenPlayersCount Spieler betroffen',
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  fontSize: 13,
+                                  color: AppTheme.grey600,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Transform.scale(
+                    scale: 0.8,
+                    child: Switch(
+                      value: _hideZeroAttendance,
+                      activeThumbColor: AppTheme.cardColorLight,
+                      activeTrackColor: AppTheme.primaryBlue,
+                      onChanged: (value) {
+                        setState(() {
+                          _hideZeroAttendance = value;
+                        });
+                      },
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _legendExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInOut,
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 24,
+                      color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                    ),
+                  ),
+                ],
+              ),
+              AnimatedCrossFade(
+                firstChild: const SizedBox(width: double.infinity),
+                secondChild: _buildStatsLegend(),
+                crossFadeState: _legendExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 180),
+                sizeCurve: Curves.easeInOut,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsLegend() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 12),
+      child: Column(
+        children: [
+          Divider(
+            height: 1,
+            color: isDark ? AppTheme.grey700 : AppTheme.grey300,
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Text(
-                  'Nur mit A > 0',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  'W:\nL:\nD:\nS:\n%:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight(600)),
                 ),
-                SizedBox(width: 18),
+                SizedBox(width: 10,),
                 Text(
-                  '$hiddenPlayersCount Spieler betroffen',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: 13,
-                    color: AppTheme.grey600,
-                  ),
+                  'Siege\nNiederlagen\nUnentschieden\nSpiele\nSiegquote in Prozent',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight(300)),
                 ),
               ],
-            ),
-          ),
-          Transform.scale(
-            scale: 0.8,
-            child: Switch(
-              value: _hideZeroAttendance,
-              activeThumbColor: AppTheme.cardColorLight,
-              activeTrackColor: AppTheme.primaryBlue,
-              onChanged: (value) {
-                setState(() {
-                  _hideZeroAttendance = value;
-                });
-              },
             ),
           ),
         ],
@@ -362,7 +435,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                   _sort((p) => p.attendance - (p.wins + p.losses), i, asc),
             ),
             DataColumn2(
-              label: const Text('A'),
+              label: const Text('S'),
               fixedWidth: 25,
               minWidth: 35,
               numeric: true,
@@ -407,7 +480,6 @@ class _AllStatsPageState extends State<AllStatsPage> {
       ),
     );
   }
-
 }
 
 class _StatsChip extends StatelessWidget {

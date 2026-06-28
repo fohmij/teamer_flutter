@@ -224,8 +224,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
               : AppTheme.btnBlue1,
           child: ListTile(
             onTap: () => _togglePlayer(player),
-            onLongPress: () =>
-                _showEditPlayerDialog(player),
+            onLongPress: () => _showEditPlayerDialog(player),
             title: Padding(
               padding: const EdgeInsets.only(left: 14.0),
               child: Text(
@@ -388,10 +387,12 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
   }
 
   void _showDeletePlayerDialog(Player player, {bool showPlayerName = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: const RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: isDark ? AppTheme.grey700 : Colors.white),
           borderRadius: BorderRadius.all(Radius.circular(8.0)),
         ),
         content: Column(
@@ -1025,14 +1026,23 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
                       ),
                     ),
                     onPressed: widget.onDelete,
-                    icon: const Icon(Icons.delete, color: Colors.white, size: 20),
+                    icon: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
-                SizedBox(width: 15,),
-                Text("Spieler löschen", style: TextStyle(color: isDark ? AppTheme.grey600 : AppTheme.grey700),)
+                SizedBox(width: 15),
+                Text(
+                  "Spieler löschen",
+                  style: TextStyle(
+                    color: isDark ? AppTheme.grey600 : AppTheme.grey700,
+                  ),
+                ),
               ],
             ),
-            SizedBox(height: 15,),
+            SizedBox(height: 15),
             TextField(
               controller: _controller,
               autofocus: true,
