@@ -49,14 +49,6 @@ class _TeamPageState extends State<TeamPage> {
           teamBWon: teamBWon,
         );
 
-        if (teamBWon == 0) {
-          await _databaseService.teamAWins();
-        } else if (teamBWon == 1) {
-          await _databaseService.teamBWins();
-        } else {
-          await _databaseService.draw();
-        }
-
         if (!context.mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -280,7 +272,7 @@ class _HeaderInfo extends StatelessWidget {
                 : AppTheme.grey600,
           ),
         ),
-        SizedBox(width: 10,), 
+        SizedBox(width: 10),
         Icon(
           Icons.group_outlined,
           color: Theme.of(context).brightness == Brightness.dark
@@ -299,7 +291,7 @@ class _HeaderInfo extends StatelessWidget {
             fontSize: 12,
           ),
         ),
-        SizedBox(width: 10,), 
+        SizedBox(width: 10),
         Expanded(
           child: Divider(
             thickness: 1,
@@ -487,8 +479,15 @@ Future<void> _showGameDialog({
   required String title,
   required Future<void> Function(String gameName) onFinish,
 }) async {
-  String? game;
   final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  final now = DateTime.now();
+  final defaultGameName =
+      '${now.year}'
+      '${now.month.toString().padLeft(2, '0')}'
+      '${now.day.toString().padLeft(2, '0')}';
+
+  final controller = TextEditingController(text: defaultGameName);
 
   return showDialog(
     context: context,
@@ -501,77 +500,106 @@ Future<void> _showGameDialog({
         width: 560,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 30.0),
-              child: TextField(
-                style: Theme.of(context).textTheme.bodyMedium,
-                onChanged: (value) => game = value,
-                onSubmitted: (value) async {
-                  if (value.isEmpty) return;
-                  await onFinish(value);
-                  if (dialogContext.mounted) {
-                    Navigator.of(dialogContext).pop();
-                  }
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  hintText: 'Spielname...',
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+                  size: 18,
                 ),
-                autofocus: true,
-              ),
+                SizedBox(width: 10),
+                Text(
+                  "Spielname eingeben\n(Default ist das aktuelle Datum)",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 50.0),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 135,
-                    height: 40,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: isDark
-                            ? AppTheme.grey700
-                            : Colors.white,
-                        foregroundColor: Colors.white,
-                        side: BorderSide(
-                          color: isDark ? Colors.transparent : AppTheme.grey300,
-                          width: 1,
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        "Abbrechen",
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ),
-                  ),
-                  Spacer(),
-                  SizedBox(
-                    height: 40,
-                    width: 135,
-                    child: TextButton(
-                      onPressed: () async {
-                        if (game == null || game!.trim().isEmpty) return;
-
-                        await onFinish(game!.trim());
-
-                        if (dialogContext.mounted) {
-                          Navigator.of(dialogContext).pop();
-                        }
-                      },
-                      child: Text(
-                        "Fertig",
-                        style: Theme.of(context).textTheme.displaySmall,
-                      ),
-                    ),
-                  ),
-                ],
+            SizedBox(height: 20),
+            TextField(
+              style: Theme.of(context).textTheme.bodyMedium,
+              controller: controller,
+              onSubmitted: (value) async {
+                if (value.isEmpty) return;
+                await onFinish(value);
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
+                ),
+                hintText: 'Spielname...',
               ),
+              autofocus: true,
+            ),
+            SizedBox(height: 30),
+            Row(
+              children: [
+                SizedBox(
+                  width: 135,
+                  height: 40,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+                      foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: isDark ? Colors.transparent : AppTheme.grey300,
+                        width: 1,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      "Abbrechen",
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ),
+                ),
+                Spacer(),
+                SizedBox(
+                  height: 40,
+                  width: 135,
+                  child: TextButton(
+                    onPressed: () async {
+                      final gameName = controller.text.trim();
+
+                      if (gameName.isEmpty) return;
+
+                      if (await DatabaseService.instance.gameNameExists(
+                        gameName,
+                      )) {
+                        if (dialogContext.mounted) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Ein Spiel mit diesem Namen existiert bereits.',
+                              ),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+
+                      await onFinish(gameName);
+
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      }
+                    },
+                    child: Text(
+                      "Fertig",
+                      style: Theme.of(context).textTheme.displaySmall,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

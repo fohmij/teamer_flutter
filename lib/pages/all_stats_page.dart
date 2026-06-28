@@ -28,7 +28,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
   }
 
   Future<void> _loadPlayers() async {
-    final players = await _databaseService.getPlayers();
+    final players = await _databaseService.getPlayersWithStatsFromGames();
     final games = await _databaseService.getGames();
 
     if (!mounted) return;
@@ -250,7 +250,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                   _StatsChip(label: 'Spiele', value: _gamesCount.toString()),
                 ],
               ),
-              _buildResetButton(),
+              // _buildResetButton(),
             ],
           ),
         ],

@@ -136,6 +136,86 @@ class DatabaseService {
     });
   }
 
+
+  List<int> _parseGameTeamIds(Object? value) {
+    if (value == null) return [];
+
+    return value
+        .toString()
+        .split(',')
+        .map((id) => int.tryParse(id.trim()))
+        .whereType<int>()
+        .toList();
+  }
+
+  Future<List<Player>> getPlayersWithStatsFromGames() async {
+    final players = await getPlayers();
+    final db = await database;
+
+    final statsByPlayerId = <int, _CalculatedPlayerStats>{
+      for (final player in players) player.id: _CalculatedPlayerStats(),
+    };
+
+    final games = await db.query(_gamesTableName);
+
+    for (final game in games) {
+      final teamAIds = _parseGameTeamIds(game[_gamesTeamAColumnName]);
+      final teamBIds = _parseGameTeamIds(game[_gamesTeamBColumnName]);
+      final teamBWon = game[_gamesTeamBWonColumnName] as int;
+
+      void addAttendance(Iterable<int> playerIds) {
+        for (final playerId in playerIds) {
+          final stats = statsByPlayerId[playerId];
+          if (stats != null) stats.attendance += 1;
+        }
+      }
+
+      void addWins(Iterable<int> playerIds) {
+        for (final playerId in playerIds) {
+          final stats = statsByPlayerId[playerId];
+          if (stats != null) stats.wins += 1;
+        }
+      }
+
+      void addLosses(Iterable<int> playerIds) {
+        for (final playerId in playerIds) {
+          final stats = statsByPlayerId[playerId];
+          if (stats != null) stats.losses += 1;
+        }
+      }
+
+      addAttendance(teamAIds);
+      addAttendance(teamBIds);
+
+      if (teamBWon == 0) {
+        addWins(teamAIds);
+        addLosses(teamBIds);
+      } else if (teamBWon == 1) {
+        addLosses(teamAIds);
+        addWins(teamBIds);
+      }
+    }
+
+    return players.map((player) {
+      final stats = statsByPlayerId[player.id] ?? _CalculatedPlayerStats();
+      final winRate = stats.attendance == 0
+          ? 0.5
+          : stats.wins / stats.attendance;
+
+      return Player(
+        id: player.id,
+        name: player.name,
+        status: player.status,
+        position: player.position,
+        team: player.team,
+        winRate: winRate,
+        wins: stats.wins,
+        losses: stats.losses,
+        attendance: stats.attendance,
+      );
+    }).toList();
+  }
+
   Future<List<Player>> getPlayers() async {
     final db = await database;
     final data = await db.query(
@@ -379,7 +459,7 @@ class DatabaseService {
   }
 
   Future<void> optimizedTeam() async {
-    List<Player> players = await getPlayers();
+    List<Player> players = await getPlayersWithStatsFromGames();
     List<Player> activePlayers = players.where((p) => p.status == 1).toList();
 
     if (activePlayers.isEmpty) return;
@@ -409,7 +489,7 @@ class DatabaseService {
   }
 
   Future<double> getWinRateDifference() async {
-    List<Player> players = await getPlayers();
+    List<Player> players = await getPlayersWithStatsFromGames();
     List<Player> activePlayers = players.where((p) => p.status == 1).toList();
 
     if (activePlayers.isEmpty) return 0.0;
@@ -448,4 +528,23 @@ class DatabaseService {
 
     return result.map((row) => row["name"] as String).join(", ");
   }
+  Future<bool> gameNameExists(String name) async {
+  final db = await database;
+
+  final result = await db.query(
+    _gamesTableName,
+    where: 'LOWER($_gamesNameColumnName) = ?',
+    whereArgs: [name.trim().toLowerCase()],
+    limit: 1,
+  );
+
+  return result.isNotEmpty;
+}
+}
+
+
+class _CalculatedPlayerStats {
+  int wins = 0;
+  int losses = 0;
+  int attendance = 0;
 }
