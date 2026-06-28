@@ -3,6 +3,7 @@ import 'package:teamer/app_theme/app_theme.dart';
 import '../database/player.dart';
 import 'package:teamer/database/database_services.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:teamer/pages/team_analysis_page.dart';
 
 class TeamPage extends StatefulWidget {
   const TeamPage({super.key});
@@ -64,6 +65,8 @@ class _TeamPageState extends State<TeamPage> {
   Widget build(BuildContext context) {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final showAnalysisButton = args is TeamPageArgs && args.showAnalysisButton;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -75,6 +78,18 @@ class _TeamPageState extends State<TeamPage> {
         backgroundColor: isDark
             ? AppTheme.navigationBarDark
             : AppTheme.navigationBarLight,
+        actions: showAnalysisButton
+            ? [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: IconButton(
+                    tooltip: 'Team-Analyse',
+                    onPressed: () => Navigator.pushNamed(context, '/team_analysis'),
+                    icon: const Icon(Icons.balance),
+                  ),
+                ),
+              ]
+            : null,
       ),
       body: SafeArea(
         child: FutureBuilder<List<Player>>(
