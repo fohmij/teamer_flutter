@@ -63,53 +63,6 @@ class _AllStatsPageState extends State<AllStatsPage> {
     });
   }
 
-  Future<void> _resetStats() async {
-    setState(() {
-      _loading = true;
-    });
-
-    await _databaseService.resetStats();
-    await _loadPlayers();
-  }
-
-  void _showResetStatsDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8.0)),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const _ResetStatsDialogTitle(),
-            const Padding(padding: EdgeInsets.only(top: 6.0), child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 30.0),
-              child: Text(
-                'Sollen wirklich alle Statistiken zurückgesetzt werden?',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 12.0),
-              child: Divider(),
-            ),
-            _ResetStatsDialogActions(
-              onCancel: () {
-                Navigator.pop(context);
-              },
-              onReset: () async {
-                Navigator.pop(context);
-                await _resetStats();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -546,21 +499,6 @@ class _AllStatsPageState extends State<AllStatsPage> {
       ),
     );
   }
-
-  Widget _buildResetButton() {
-    return SizedBox(
-      height: 38,
-      width: 38,
-      child: IconButton(
-        style: TextButton.styleFrom(
-          backgroundColor: AppTheme.deleteRed,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        ),
-        onPressed: _showResetStatsDialog,
-        icon: const Icon(Icons.delete, color: Colors.white, size: 20),
-      ),
-    );
-  }
 }
 
 class _StatsChip extends StatelessWidget {
@@ -622,82 +560,6 @@ class _StatText extends StatelessWidget {
         fontSize: 15,
         fontWeight: FontWeight.w300,
       ),
-    );
-  }
-}
-
-class _ResetStatsDialogTitle extends StatelessWidget {
-  const _ResetStatsDialogTitle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 2.0),
-            child: Icon(Icons.warning, size: 25.0),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0),
-            child: Text(
-              'Stats zurücksetzen',
-              style: Theme.of(context).textTheme.displayLarge,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResetStatsDialogActions extends StatelessWidget {
-  final VoidCallback onCancel;
-  final Future<void> Function() onReset;
-
-  const _ResetStatsDialogActions({
-    required this.onCancel,
-    required this.onReset,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Row(
-      children: [
-        SizedBox(
-          height: 40,
-          width: 135,
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
-              foregroundColor: Colors.white,
-              side: BorderSide.none,
-            ),
-            onPressed: onCancel,
-            child: Text(
-              'Abbrechen',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ),
-        ),
-        const Spacer(),
-        SizedBox(
-          height: 40,
-          width: 135,
-          child: TextButton(
-            style: TextButton.styleFrom(backgroundColor: AppTheme.deleteRed),
-            onPressed: onReset,
-            child: Text(
-              'Zurücksetzen',
-              style: Theme.of(context).textTheme.displaySmall,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

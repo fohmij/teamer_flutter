@@ -36,13 +36,13 @@ dev_dependencies:
   flutter_native_splash: ^2.4.7
 
 flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: "AppIcon"
-  image_path: "assets/icon/ic_launcher-web.png" # Set the path of the icon image (preferably in the root folder of your project)
-  adaptive_icon_foreground: "assets/icon/icon.png" # Set the foreground image (same or different from image_path)
-  adaptive_icon_background: "#5F8F3C"
-  remove_alpha_ios: true
-  min_sdk_android: 21
+  android: true
+  ios: true
+  image_path: "assets/icon/icon_wm_quali.png" # Set the path of the icon image (preferably in the root folder of your project)
+  # adaptive_icon_foreground: "assets/icon/icon.png" # Set the foreground image (same or different from image_path)
+  # adaptive_icon_background: "#5F8F3C"
+  # remove_alpha_ios: true
+  # min_sdk_android: 21
 
 flutter_native_splash:
   color: "#F4FAEC"
@@ -71,7 +71,7 @@ flutter:
     - assets/pictures/QR_Code_white.jpg
     - assets/pictures/QR_Code_black.jpg
     - assets/pictures/Hannover2026.png  
-    - assets/icon/icon.png
+    - assets/icon/icon_wm_quali.png
     - assets/pdfs/schulregelwerk.pdf
     - assets/pdfs/Floorball-Trainingsunterlagen.pdf
     - assets/splash_screens/teamer_splash_screen_light.png

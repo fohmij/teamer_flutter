@@ -16,16 +16,13 @@ class PdfViewerPage extends StatefulWidget {
   State<PdfViewerPage> createState() => _PdfViewerPageState();
 }
 
-class _PdfViewerPageState extends State<PdfViewerPage> {
-  final PdfViewerController _pdfController = PdfViewerController();
+class _PdfViewerPageState extends State<PdfViewerPage> { final PdfViewerController _pdfController = PdfViewerController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
   PdfTextSearchResult _searchResult = PdfTextSearchResult();
 
   bool _showSearchBar = false;
-  int _currentPage = 1;
-  int _totalPages = 0;
 
   @override
   void dispose() {
@@ -121,14 +118,6 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                     canShowScrollStatus: false,
                     enableDoubleTapZooming: false,
                     pageSpacing: 0,
-                    onDocumentLoaded: (details) {
-                      setState(() {
-                        _totalPages = details.document.pages.count;
-                      });
-                    },
-                    onPageChanged: (details) {
-                      _currentPage = details.newPageNumber;
-                    },
                   ),
                 ],
               ),
