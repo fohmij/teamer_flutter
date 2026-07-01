@@ -84,7 +84,10 @@ class _TeamPageState extends State<TeamPage> {
                   padding: const EdgeInsets.only(right: 8.0),
                   child: IconButton(
                     tooltip: 'Team-Analyse',
-                    onPressed: () => Navigator.pushNamed(context, '/team_analysis'),
+                    onPressed: () => Navigator.pushReplacementNamed(
+                      context,
+                      '/team_analysis',
+                    ),
                     icon: const Icon(Icons.balance),
                   ),
                 ),
