@@ -19,7 +19,7 @@ class _StatsPageState extends State<StatsPage> {
               eventCard(),
               //padding: const EdgeInsets.only(top: 20.0),
               SizedBox(
-                height: 20,
+                height: 12,
               ),
               SizedBox(
                 width: double.infinity,
@@ -28,37 +28,40 @@ class _StatsPageState extends State<StatsPage> {
                   children: [
                     Expanded(
                         child: SizedBox(
-                      height: 120,
-                      child: statsCard("Street\nFloorball", Icons.event),
+                      height: 110,
+                      child: statsCard("SFT", Icons.event),
                     )),
                     SizedBox(
-                      width: 20,
+                      width: 12,
                     ),
                     Expanded(
                         child: SizedBox(
-                      height: 120,
+                      height: 110,
                       child: statsCard("Alle \nStats", Icons.equalizer, page: "/all_stats"),
                     )),
                   ],
                 ),
               ),
               SizedBox(
-                height: 20,
+                height: 12,
               ),
               SizedBox(
-                height: 120,
+                height: 110,
                 width: double.infinity,
                 child: statsCard("Alle \nSpiele", Icons.history, page: "/all_games"),
               ),
               SizedBox(
-                height: 20,
+                height: 12,
               ),
               SizedBox(
-                height: 120,
+                height: 110,
                 width: double.infinity,
                 child: statsCardColord("Coaching- \nZone", Icons.star, const Color.fromARGB(255, 221, 2, 56),
                     page: '/coachingzonepage'),
-              )
+              ),
+              SizedBox(
+                height: 80,
+              ),
             ])));
   }
 
@@ -75,7 +78,7 @@ class _StatsPageState extends State<StatsPage> {
           child: Text(
             label,
             style: TextStyle(
-                height: 1.1, fontSize: 20, fontWeight: FontWeight.bold),
+                height: 1.1, fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
         Positioned(
@@ -87,7 +90,7 @@ class _StatsPageState extends State<StatsPage> {
             children: [
               Icon(
                 icon,
-                size: 30,
+                size: 28,
               ),
             ],
           ),
@@ -121,7 +124,7 @@ class _StatsPageState extends State<StatsPage> {
           child: Text(
             label,
             style: TextStyle(
-                height: 1.1, fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                height: 1.1, fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
         Positioned(
@@ -133,7 +136,7 @@ class _StatsPageState extends State<StatsPage> {
             children: [
               Icon(
                 icon,
-                size: 30,
+                size: 28,
                 color: Colors.white,
               ),
             ],
@@ -157,7 +160,7 @@ class _StatsPageState extends State<StatsPage> {
 
   SizedBox eventCard() {
     return SizedBox(
-      height: 250,
+      height: 200,
       child: Card(
         elevation: 2,
         child: Stack(children: <Widget>[
@@ -175,7 +178,7 @@ class _StatsPageState extends State<StatsPage> {
             child: Text(
           'SFT Championships \nHannover 2026',
               style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 22,
                   color: Colors.white,
                   fontWeight: FontWeight.bold),
             ),

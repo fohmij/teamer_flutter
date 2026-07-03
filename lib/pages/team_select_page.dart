@@ -84,7 +84,9 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
       alignment: Alignment.center,
       children: [
         Container(
-          color: isDark ? AppTheme.navigationBarDark : AppTheme.navigationBarLight,
+          color: isDark
+              ? AppTheme.navigationBarDark
+              : AppTheme.navigationBarLight,
           child: Row(
             children: [
               const SizedBox(width: 15),
@@ -94,7 +96,10 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
             ],
           ),
         ),
-        _SelectedCountIndicator(selectedCount: selectedCount, totalCount: players.length),
+        _SelectedCountIndicator(
+          selectedCount: selectedCount,
+          totalCount: players.length,
+        ),
       ],
     );
   }
@@ -156,9 +161,14 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
             Padding(
               padding: const EdgeInsets.only(right: 25.0),
               child: TextButton(
-                style: TextButton.styleFrom(backgroundColor: Colors.transparent),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                ),
                 onPressed: _showAddPlayerDialog,
-                child: Text('Neuer Spieler', style: Theme.of(context).textTheme.labelMedium),
+                child: Text(
+                  'Neuer Spieler',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
               ),
             ),
           ],
@@ -208,14 +218,17 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
           color: player.status == 0
               ? Theme.of(context).scaffoldBackgroundColor
               : isDark
-                  ? AppTheme.grey700
-                  : AppTheme.btnBlue1,
+              ? AppTheme.grey700
+              : AppTheme.btnBlue1,
           child: ListTile(
             onTap: () => _togglePlayer(player),
             onLongPress: () => _showEditPlayerDialog(player),
             title: Padding(
               padding: const EdgeInsets.only(left: 14.0),
-              child: Text(player.name, style: Theme.of(context).textTheme.bodyMedium),
+              child: Text(
+                player.name,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
             trailing: Checkbox(
               value: player.status == 1,
@@ -246,7 +259,8 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
 
     setState(() {
       _playersFuture = Future.value(players);
-      allBtnSelected = players.isNotEmpty && players.every((p) => p.status == 1);
+      allBtnSelected =
+          players.isNotEmpty && players.every((p) => p.status == 1);
     });
   }
 
@@ -255,13 +269,17 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        insetPadding: const EdgeInsets.all(24),
         shape: RoundedRectangleBorder(
           side: BorderSide(color: isDark ? AppTheme.grey700 : Colors.white),
           borderRadius: const BorderRadius.all(Radius.circular(8.0)),
         ),
-        title: Text('Neuer Spieler', style: Theme.of(context).textTheme.displayLarge),
+        title: Text(
+          'Neuer Spieler',
+          style: Theme.of(context).textTheme.displayLarge,
+        ),
         content: SizedBox(
-          width: 560,
+          width: 760,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -272,7 +290,9 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                   onChanged: (value) => _player = value,
                   onSubmitted: (_) => _submitNewPlayer(),
                   decoration: const InputDecoration(
-                    border: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
                     hintText: 'Name...',
                   ),
                   focusNode: _focusNode,
@@ -284,28 +304,39 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                 child: Row(
                   children: [
                     SizedBox(
-                      width: 135,
+                      width: 125,
                       height: 40,
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          backgroundColor: isDark
+                              ? AppTheme.grey700
+                              : Colors.white,
                           foregroundColor: Colors.white,
                           side: BorderSide(
-                            color: isDark ? Colors.transparent : AppTheme.grey300,
+                            color: isDark
+                                ? Colors.transparent
+                                : AppTheme.grey300,
                             width: 1,
                           ),
                         ),
                         onPressed: () => Navigator.pop(context),
-                        child: Text('Abbrechen', style: Theme.of(context).textTheme.labelSmall),
+                        child: Text(
+                          'Abbrechen',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
                       ),
                     ),
                     const Spacer(),
                     SizedBox(
+                      width: 125,
                       height: 40,
-                      width: 135,
                       child: TextButton(
                         onPressed: _submitNewPlayer,
-                        child: Text('Fertig', style: Theme.of(context).textTheme.displaySmall),
+                        child: Text(
+                          'Fertig',
+                          style: Theme.of(context).textTheme.displaySmall,
+                        ),
                       ),
                     ),
                   ],
@@ -346,6 +377,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        insetPadding: const EdgeInsets.all(24),
         shape: RoundedRectangleBorder(
           side: BorderSide(color: isDark ? AppTheme.grey700 : Colors.white),
           borderRadius: const BorderRadius.all(Radius.circular(8.0)),
@@ -362,14 +394,25 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                       TextSpan(
                         text: 'Soll ',
                         children: [
-                          TextSpan(text: player.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          const TextSpan(text: ' wirklich dauerhaft gelöscht werden?'),
+                          TextSpan(
+                            text: player.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const TextSpan(
+                            text: ' wirklich dauerhaft gelöscht werden?',
+                          ),
                         ],
                       ),
                     )
-                  : Text('Soll der Spieler wirklich dauerhaft gelöscht werden?', style: Theme.of(context).textTheme.bodyMedium),
+                  : Text(
+                      'Soll der Spieler wirklich dauerhaft gelöscht werden?',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
             ),
-            const Padding(padding: EdgeInsets.only(bottom: 12.0), child: Divider()),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12.0),
+              child: Divider(),
+            ),
             _DeleteDialogActions(
               onCancel: () => Navigator.pop(context),
               onDelete: () => _deletePlayer(player),
@@ -403,7 +446,9 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
           _RevealFloatingActionButton(
             key: const ValueKey('playerRevealFab'),
             mainButton: _ScanFloatingButton(onPressed: _scanPlayers),
-            revealedButton: _PlayerFloatingButton(onPressed: _showAddPlayerDialog),
+            revealedButton: _PlayerFloatingButton(
+              onPressed: _showAddPlayerDialog,
+            ),
           ),
           const SizedBox(height: 20, width: 150),
           _RevealFloatingActionButton(
@@ -411,7 +456,9 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
             mainButton: _BalancedTeamFloatingButton(
               onPressed: () => _optimizedTeam(enoughPlayers, notTooManyPlayers),
             ),
-            revealedButton: _RandomTeamFloatingButton(onPressed: () => _randomTeam(enoughPlayers)),
+            revealedButton: _RandomTeamFloatingButton(
+              onPressed: () => _randomTeam(enoughPlayers),
+            ),
           ),
           const SizedBox(height: 110, width: 150),
         ],
@@ -430,7 +477,10 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     Navigator.pushNamed(context, '/team');
   }
 
-  Future<void> _optimizedTeam(bool enoughPlayers, bool notTooManyPlayers) async {
+  Future<void> _optimizedTeam(
+    bool enoughPlayers,
+    bool notTooManyPlayers,
+  ) async {
     final selectedCount = await _selectedPlayersCount();
 
     if (selectedCount < 2) {
@@ -439,7 +489,9 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     }
 
     if (selectedCount > _maxSelectedPlayers) {
-      _showPlayerSelectionToast('Bitte maximal $_maxSelectedPlayers Spieler auswählen');
+      _showPlayerSelectionToast(
+        'Bitte maximal $_maxSelectedPlayers Spieler auswählen',
+      );
       return;
     }
 
@@ -494,7 +546,11 @@ class _TeamSelectScaffold extends StatelessWidget {
   final Widget playersList;
   final Widget floatingActionButton;
 
-  const _TeamSelectScaffold({required this.header, required this.playersList, required this.floatingActionButton});
+  const _TeamSelectScaffold({
+    required this.header,
+    required this.playersList,
+    required this.floatingActionButton,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -509,7 +565,10 @@ class _SelectedCountIndicator extends StatelessWidget {
   final int selectedCount;
   final int totalCount;
 
-  const _SelectedCountIndicator({required this.selectedCount, required this.totalCount});
+  const _SelectedCountIndicator({
+    required this.selectedCount,
+    required this.totalCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +581,11 @@ class _SelectedCountIndicator extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             '$selectedCount/$totalCount',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.grey600),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.grey600,
+            ),
           ),
         ],
       ),
@@ -540,10 +603,16 @@ class _DeleteDialogTitle extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          const Padding(padding: EdgeInsets.only(bottom: 2.0), child: Icon(Icons.delete, size: 25.0)),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 2.0),
+            child: Icon(Icons.delete, size: 25.0),
+          ),
           Padding(
             padding: const EdgeInsets.only(left: 8.0),
-            child: Text('Löschen', style: Theme.of(context).textTheme.displayLarge),
+            child: Text(
+              'Löschen',
+              style: Theme.of(context).textTheme.displayLarge,
+            ),
           ),
         ],
       ),
@@ -564,25 +633,32 @@ class _DeleteDialogActions extends StatelessWidget {
       children: [
         SizedBox(
           height: 40,
-          width: 135,
+          width: 125,
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 8),
               backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
               foregroundColor: Colors.white,
               side: BorderSide.none,
             ),
             onPressed: onCancel,
-            child: Text('Abbrechen', style: Theme.of(context).textTheme.labelSmall),
+            child: Text(
+              'Abbrechen',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
           ),
         ),
         const Spacer(),
         SizedBox(
           height: 40,
-          width: 135,
+          width: 125,
           child: TextButton(
             style: TextButton.styleFrom(backgroundColor: AppTheme.deleteRed),
             onPressed: onDelete,
-            child: Text('Löschen', style: Theme.of(context).textTheme.displaySmall),
+            child: Text(
+              'Löschen',
+              style: Theme.of(context).textTheme.displaySmall,
+            ),
           ),
         ),
       ],
@@ -609,7 +685,13 @@ class _PlayerFloatingButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.add, color: isDark ? Colors.white : Colors.black),
-            Text('Player', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black)),
+            Text(
+              'Player',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
           ],
         ),
       ),
@@ -634,7 +716,10 @@ class _RandomTeamFloatingButton extends StatelessWidget {
         backgroundColor: AppTheme.btnBlue3,
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [Icon(Icons.casino_outlined), Text('Random', style: TextStyle(fontSize: 11))],
+          children: [
+            Icon(Icons.casino_outlined),
+            Text('Random', style: TextStyle(fontSize: 11)),
+          ],
         ),
       ),
     );
@@ -656,7 +741,10 @@ class _BalancedTeamFloatingButton extends StatelessWidget {
         backgroundColor: AppTheme.btnBlue3,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         onPressed: onPressed,
-        child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Symbols.balance), Text('Team')]),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [Icon(Symbols.balance), Text('Team')],
+        ),
       ),
     );
   }
@@ -681,8 +769,17 @@ class _ScanFloatingButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.document_scanner, color: isDark ? Colors.white : Colors.black),
-            Text('Scan', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black)),
+            Icon(
+              Icons.document_scanner,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+            Text(
+              'Scan',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
           ],
         ),
       ),
@@ -694,23 +791,33 @@ class _RevealFloatingActionButton extends StatefulWidget {
   final Widget mainButton;
   final Widget revealedButton;
 
-  const _RevealFloatingActionButton({super.key, required this.mainButton, required this.revealedButton});
+  const _RevealFloatingActionButton({
+    super.key,
+    required this.mainButton,
+    required this.revealedButton,
+  });
 
   @override
-  State<_RevealFloatingActionButton> createState() => _RevealFloatingActionButtonState();
+  State<_RevealFloatingActionButton> createState() =>
+      _RevealFloatingActionButtonState();
 }
 
-class _RevealFloatingActionButtonState extends State<_RevealFloatingActionButton> with SingleTickerProviderStateMixin {
+class _RevealFloatingActionButtonState
+    extends State<_RevealFloatingActionButton>
+    with SingleTickerProviderStateMixin {
   static const double _buttonSize = 65;
   static const double _buttonGap = 20;
   static const double _arrowGap = 1;
   static const double _arrowSize = 22;
   static const double _revealedButtonRightInset = 24;
   static const double _height = _buttonSize;
-  static const double _width = (_buttonSize * 2) + _buttonGap + _revealedButtonRightInset;
+  static const double _width =
+      (_buttonSize * 2) + _buttonGap + _revealedButtonRightInset;
   static const double _mainButtonClosedRightInset = _arrowSize + _arrowGap;
-  static const double _mainButtonOpenedRightInset = _revealedButtonRightInset + _buttonSize + _buttonGap;
-  static const double _maxRevealOffset = _mainButtonOpenedRightInset - _mainButtonClosedRightInset;
+  static const double _mainButtonOpenedRightInset =
+      _revealedButtonRightInset + _buttonSize + _buttonGap;
+  static const double _maxRevealOffset =
+      _mainButtonOpenedRightInset - _mainButtonClosedRightInset;
 
   double _dragOffset = 0;
   late final AnimationController _hintController;
@@ -719,10 +826,25 @@ class _RevealFloatingActionButtonState extends State<_RevealFloatingActionButton
   @override
   void initState() {
     super.initState();
-    _hintController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _hintController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _hintAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 18).chain(CurveTween(curve: Curves.easeOut)), weight: 45),
-      TweenSequenceItem(tween: Tween<double>(begin: 18, end: 0).chain(CurveTween(curve: Curves.easeInOut)), weight: 55),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 0,
+          end: 18,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 45,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 18,
+          end: 0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 55,
+      ),
     ]).animate(_hintController);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _hintController.forward();
@@ -737,7 +859,10 @@ class _RevealFloatingActionButtonState extends State<_RevealFloatingActionButton
 
   void _handleDragUpdate(DragUpdateDetails details) {
     setState(() {
-      _dragOffset = (_dragOffset - details.delta.dx).clamp(0.0, _maxRevealOffset);
+      _dragOffset = (_dragOffset - details.delta.dx).clamp(
+        0.0,
+        _maxRevealOffset,
+      );
     });
   }
 
@@ -754,7 +879,10 @@ class _RevealFloatingActionButtonState extends State<_RevealFloatingActionButton
       builder: (context, _) {
         final isClosed = _dragOffset == 0;
         final hintOffset = isClosed ? _hintAnimation.value : 0.0;
-        final totalOffset = (_dragOffset + hintOffset).clamp(0.0, _maxRevealOffset);
+        final totalOffset = (_dragOffset + hintOffset).clamp(
+          0.0,
+          _maxRevealOffset,
+        );
         final revealProgress = (totalOffset / _maxRevealOffset).clamp(0.0, 1.0);
 
         return SizedBox(
@@ -767,7 +895,10 @@ class _RevealFloatingActionButtonState extends State<_RevealFloatingActionButton
                 right: _revealedButtonRightInset,
                 child: IgnorePointer(
                   ignoring: revealProgress < 0.9,
-                  child: Opacity(opacity: revealProgress, child: widget.revealedButton),
+                  child: Opacity(
+                    opacity: revealProgress,
+                    child: widget.revealedButton,
+                  ),
                 ),
               ),
               Positioned(
@@ -785,7 +916,11 @@ class _RevealFloatingActionButtonState extends State<_RevealFloatingActionButton
                 child: AnimatedOpacity(
                   opacity: isClosed ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 120),
-                  child: const Icon(Icons.arrow_back_ios_new, size: _arrowSize, color: AppTheme.grey600),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new,
+                    size: _arrowSize,
+                    color: AppTheme.grey600,
+                  ),
                 ),
               ),
             ],
@@ -797,7 +932,10 @@ class _RevealFloatingActionButtonState extends State<_RevealFloatingActionButton
 }
 
 class _RenamePlayerDialog extends StatefulWidget {
-  const _RenamePlayerDialog({required this.initialName, required this.onDelete});
+  const _RenamePlayerDialog({
+    required this.initialName,
+    required this.onDelete,
+  });
 
   final String initialName;
   final VoidCallback onDelete;
@@ -813,7 +951,10 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialName);
-    _controller.selection = TextSelection(baseOffset: 0, extentOffset: widget.initialName.length);
+    _controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: widget.initialName.length,
+    );
   }
 
   @override
@@ -832,11 +973,15 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
+      insetPadding: const EdgeInsets.all(24),
       shape: RoundedRectangleBorder(
         side: BorderSide(color: isDark ? AppTheme.grey700 : Colors.white),
         borderRadius: const BorderRadius.all(Radius.circular(12)),
       ),
-      title: Text('Spieler bearbeiten', style: Theme.of(context).textTheme.displayLarge),
+      title: Text(
+        'Spieler bearbeiten',
+        style: Theme.of(context).textTheme.displayLarge,
+      ),
       content: SizedBox(
         width: 560,
         height: 120,
@@ -851,14 +996,25 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
                   child: IconButton(
                     style: TextButton.styleFrom(
                       backgroundColor: AppTheme.deleteRed,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                     onPressed: widget.onDelete,
-                    icon: const Icon(Icons.delete, color: Colors.white, size: 20),
+                    icon: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 15),
-                Text('Spieler löschen', style: TextStyle(color: isDark ? AppTheme.grey600 : AppTheme.grey700)),
+                Text(
+                  'Spieler löschen',
+                  style: TextStyle(
+                    color: isDark ? AppTheme.grey600 : AppTheme.grey700,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 15),
@@ -867,7 +1023,10 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
               autofocus: true,
               style: Theme.of(context).textTheme.bodyMedium,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(hintText: 'Name...', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                hintText: 'Name...',
+                border: OutlineInputBorder(),
+              ),
               onSubmitted: (_) => _submit(),
             ),
           ],
@@ -879,24 +1038,33 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
           children: [
             SizedBox(
               height: 40,
-              width: 135,
+              width: 125,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
                   foregroundColor: Colors.white,
-                  side: BorderSide(color: isDark ? Colors.transparent : AppTheme.grey300, width: 1),
+                  side: BorderSide(
+                    color: isDark ? Colors.transparent : AppTheme.grey300,
+                    width: 1,
+                  ),
                 ),
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Abbrechen', style: Theme.of(context).textTheme.labelSmall),
+                child: Text(
+                  'Abbrechen',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ),
             ),
             const Spacer(),
             SizedBox(
               height: 40,
-              width: 135,
+              width: 125,
               child: TextButton(
                 onPressed: _submit,
-                child: Text('Speichern', style: Theme.of(context).textTheme.displaySmall),
+                child: Text(
+                  'Speichern',
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
               ),
             ),
           ],

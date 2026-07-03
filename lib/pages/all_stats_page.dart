@@ -417,7 +417,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
         ),
         child: DataTable2(
           fixedTopRows: 1,
-          minWidth: 120,
+          minWidth: 100,
           smRatio: 0.35,
           lmRatio: 2.2,
           sortColumnIndex: _sortColumnIndex,
@@ -434,6 +434,19 @@ class _AllStatsPageState extends State<AllStatsPage> {
               label: const Text('Name'),
               fixedWidth: nameColumnWidth,
               onSort: (i, asc) => _sort((p) => p.name.toLowerCase(), i, asc),
+            ),
+            DataColumn2(
+              label: const Text('%'),
+              fixedWidth: 45,
+              numeric: true,
+              onSort: (i, asc) => _sort((p) => p.winRate, i, asc),
+            ),
+            DataColumn2(
+              label: const Text('S'),
+              fixedWidth: 25,
+              minWidth: 35,
+              numeric: true,
+              onSort: (i, asc) => _sort((p) => p.attendance, i, asc),
             ),
             DataColumn2(
               label: const Text('W'),
@@ -457,19 +470,6 @@ class _AllStatsPageState extends State<AllStatsPage> {
               onSort: (i, asc) =>
                   _sort((p) => p.attendance - (p.wins + p.losses), i, asc),
             ),
-            DataColumn2(
-              label: const Text('S'),
-              fixedWidth: 25,
-              minWidth: 35,
-              numeric: true,
-              onSort: (i, asc) => _sort((p) => p.attendance, i, asc),
-            ),
-            DataColumn2(
-              label: const Text('%'),
-              fixedWidth: 55,
-              numeric: true,
-              onSort: (i, asc) => _sort((p) => p.winRate, i, asc),
-            ),
           ],
           rows: visiblePlayers.map((player) {
             final int draws = player.attendance - (player.wins + player.losses);
@@ -487,11 +487,11 @@ class _AllStatsPageState extends State<AllStatsPage> {
                     ),
                   ),
                 ),
+                DataCell(_StatText((player.winRate * 100).toStringAsFixed(1))),
+                DataCell(_StatText(player.attendance.toString())),
                 DataCell(_StatText(player.wins.toString())),
                 DataCell(_StatText(player.losses.toString())),
                 DataCell(_StatText(draws.toString())),
-                DataCell(_StatText(player.attendance.toString())),
-                DataCell(_StatText((player.winRate * 100).toStringAsFixed(1))),
               ],
             );
           }).toList(),
@@ -512,7 +512,7 @@ class _StatsChip extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: isDark
             ? AppTheme.navigationBarDark
@@ -525,7 +525,7 @@ class _StatsChip extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: isDark ? AppTheme.grey300 : AppTheme.grey700,
             ),
@@ -534,7 +534,7 @@ class _StatsChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: isDark ? AppTheme.grey400 : AppTheme.grey700,
             ),
           ),

@@ -329,7 +329,7 @@ class _AboutTile extends StatelessWidget {
             'Verglichen wird nicht die Summe der Teamstärken, sondern die Durchschnittsstärke pro Team. Dadurch bleibt der Vergleich fair, auch wenn ein Team bei ungerader Spielerzahl eine Person mehr hat.',
             style: Theme.of(
               context,
-            ).textTheme.labelSmall?.copyWith(height: 1.35, fontSize: 14),
+            ).textTheme.labelSmall?.copyWith(height: 1.35, fontSize: 14, fontWeight: FontWeight(300)),
           ),
         ],
       ),

@@ -29,7 +29,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
             children: [
               Image(image: AssetImage('assets/pictures/coaching.png')),
               //padding: const EdgeInsets.only(top: 20.0),
-              SizedBox(height: 20),
+              SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: Row(
@@ -47,7 +47,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 20),
+                    SizedBox(width: 14),
                     Expanded(
                       child: SizedBox(
                         height: 120,
@@ -64,7 +64,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                   ],
                 ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: Row(
@@ -82,7 +82,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 20),
+                    SizedBox(width: 14),
                     Expanded(
                       child: SizedBox(
                         height: 120,
@@ -96,7 +96,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                   ],
                 ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: Row(
@@ -113,7 +113,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 20),
+                    SizedBox(width: 14),
                     Expanded(
                       child: SizedBox(
                         height: 120,
@@ -187,7 +187,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
               label,
               style: TextStyle(
                 height: 1.1,
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: fontAndIconColor,
               ),
@@ -238,7 +238,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
               label,
               style: TextStyle(
                 height: 1.1,
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: fontAndIconColor,
               ),
@@ -288,7 +288,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
               label,
               style: TextStyle(
                 height: 1.1,
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),

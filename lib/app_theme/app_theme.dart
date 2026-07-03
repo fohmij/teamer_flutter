@@ -49,7 +49,7 @@ class AppTheme {
         ),
         bodyMedium: TextStyle(
           color: Colors.black,
-          fontSize: 20,
+          fontSize: 18,
         ),
         labelMedium: TextStyle(
           color: grey600,

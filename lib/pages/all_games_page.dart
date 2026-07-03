@@ -828,7 +828,7 @@ class _StatsChip extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: isDark
             ? AppTheme.navigationBarDark
@@ -841,7 +841,7 @@ class _StatsChip extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: isDark ? AppTheme.grey300 : AppTheme.grey700,
             ),
@@ -850,7 +850,7 @@ class _StatsChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: isDark ? AppTheme.grey400 : AppTheme.grey700,
             ),
           ),

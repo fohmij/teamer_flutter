@@ -158,16 +158,16 @@ class _SummaryCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _InfoChip(
-                label: 'Ø Team A',
+                label: 'Ø A',
                 value: (result.averageTeamA * 100).toStringAsFixed(1),
-              ),
-              _InfoChip(
-                label: 'Ø Team B',
-                value: (result.averageTeamB * 100).toStringAsFixed(1),
               ),
               _InfoChip(
                 label: 'Diff.',
                 value: (result.difference * 100).toStringAsFixed(1),
+              ),
+              _InfoChip(
+                label: 'Ø B',
+                value: (result.averageTeamB * 100).toStringAsFixed(1),
               ),
             ],
           ),
@@ -300,7 +300,7 @@ class _InfoChip extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.navigationBarDark : Colors.white,
         borderRadius: BorderRadius.circular(4),
@@ -311,7 +311,7 @@ class _InfoChip extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: isDark ? AppTheme.grey300 : AppTheme.grey700,
             ),
@@ -320,7 +320,7 @@ class _InfoChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: isDark ? AppTheme.grey400 : AppTheme.grey700,
             ),
           ),

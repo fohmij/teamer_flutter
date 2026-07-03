@@ -424,7 +424,7 @@ class _TeamCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodyLarge
                               ?.copyWith(
                                 fontWeight: FontWeight.w400,
-                                fontSize: 19,
+                                fontSize: 16,
                               ),
                         ),
                       ),
@@ -510,6 +510,7 @@ Future<void> _showGameDialog({
   return showDialog(
     context: context,
     builder: (dialogContext) => AlertDialog(
+      insetPadding: const EdgeInsets.all(24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(8.0)),
       ),
@@ -560,10 +561,11 @@ Future<void> _showGameDialog({
             Row(
               children: [
                 SizedBox(
-                  width: 135,
+                  width: 125,
                   height: 40,
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
                       backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
                       foregroundColor: Colors.white,
                       side: BorderSide(
@@ -583,7 +585,7 @@ Future<void> _showGameDialog({
                 Spacer(),
                 SizedBox(
                   height: 40,
-                  width: 135,
+                  width: 125,
                   child: TextButton(
                     onPressed: () async {
                       final gameName = controller.text.trim();
