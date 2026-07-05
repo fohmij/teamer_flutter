@@ -284,7 +284,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 30.0),
+                padding: const EdgeInsets.only(top: 10, bottom: 20),
                 child: TextField(
                   style: Theme.of(context).textTheme.bodyMedium,
                   onChanged: (value) => _player = value,
@@ -299,8 +299,24 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
                   autofocus: true,
                 ),
               ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'Über \'Scan\' mehrere Spieler komfortabel \nper Screenshot Liste hinzufügen',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+                    ),
+                  ),
+                ],
+              ),
               Padding(
-                padding: const EdgeInsets.only(top: 50.0),
+                padding: const EdgeInsets.only(top: 20.0),
                 child: Row(
                   children: [
                     SizedBox(
@@ -1041,6 +1057,7 @@ class _RenamePlayerDialogState extends State<_RenamePlayerDialog> {
               width: 125,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
                   backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
                   foregroundColor: Colors.white,
                   side: BorderSide(

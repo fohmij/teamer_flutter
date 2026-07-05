@@ -80,8 +80,8 @@ class _AllGamesPageState extends State<AllGamesPage> {
   }
 
   String _winnerLabel(Game game) {
-    if (game.teamBWon == 0) return 'Team A gewinnt';
-    if (game.teamBWon == 1) return 'Team B gewinnt';
+    if (game.teamBWon == 0) return 'A gewinnt';
+    if (game.teamBWon == 1) return 'B gewinnt';
     return 'Remis';
   }
 
@@ -114,6 +114,7 @@ class _AllGamesPageState extends State<AllGamesPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          insetPadding: const EdgeInsets.all(24),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
@@ -154,9 +155,10 @@ class _AllGamesPageState extends State<AllGamesPage> {
                 children: [
                   SizedBox(
                     height: 40,
-                    width: 135,
+                    width: 125,
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 2),
                         backgroundColor: isDark
                             ? AppTheme.grey700
                             : Colors.white,
@@ -176,7 +178,7 @@ class _AllGamesPageState extends State<AllGamesPage> {
                   const Spacer(),
                   SizedBox(
                     height: 40,
-                    width: 135,
+                    width: 125,
                     child: TextButton(
                       style: TextButton.styleFrom(
                         backgroundColor: AppTheme.deleteRed,
@@ -212,6 +214,7 @@ class _AllGamesPageState extends State<AllGamesPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          insetPadding: const EdgeInsets.all(24),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
@@ -241,9 +244,10 @@ class _AllGamesPageState extends State<AllGamesPage> {
                 children: [
                   SizedBox(
                     height: 40,
-                    width: 135,
+                    width: 125,
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
                         backgroundColor: isDark
                             ? AppTheme.grey700
                             : Colors.white,
@@ -263,7 +267,7 @@ class _AllGamesPageState extends State<AllGamesPage> {
                   const Spacer(),
                   SizedBox(
                     height: 40,
-                    width: 135,
+                    width: 125,
                     child: TextButton(
                       style: TextButton.styleFrom(
                         backgroundColor: AppTheme.deleteRed,
@@ -424,6 +428,7 @@ class _AllGamesPageState extends State<AllGamesPage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(horizontal: 2),
                               backgroundColor: isDark
                                   ? AppTheme.grey700
                                   : Colors.white,
@@ -657,6 +662,7 @@ class _RenameGameDialogState extends State<_RenameGameDialog> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.all(24),
       shape: RoundedRectangleBorder(
         side: BorderSide(color: isDark ? AppTheme.grey700 : Colors.white),
         borderRadius: const BorderRadius.all(Radius.circular(12)),
@@ -666,7 +672,7 @@ class _RenameGameDialogState extends State<_RenameGameDialog> {
         style: Theme.of(context).textTheme.displayLarge,
       ),
       content: SizedBox(
-        width: 560,
+        width: 760,
         child: TextField(
           controller: _controller,
           autofocus: true,
@@ -685,9 +691,10 @@ class _RenameGameDialogState extends State<_RenameGameDialog> {
           children: [
             SizedBox(
               height: 40,
-              width: 135,
+              width: 125,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 2),
                   backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
                   foregroundColor: Colors.white,
                   side: BorderSide(
@@ -705,7 +712,7 @@ class _RenameGameDialogState extends State<_RenameGameDialog> {
             const Spacer(),
             SizedBox(
               height: 40,
-              width: 135,
+              width: 125,
               child: TextButton(
                 onPressed: _submit,
                 child: Text(
@@ -769,9 +776,9 @@ class _GamesSummaryCard extends StatelessWidget {
                       'Übersicht, Bearbeiten, Löschen',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelSmall?.copyWith(color: isDark ? AppTheme.grey400 : AppTheme.grey700),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: isDark ? AppTheme.grey400 : AppTheme.grey700,
+                      ),
                     ),
                   ],
                 ),
@@ -901,7 +908,6 @@ class _InfoChip extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w700,
               color: foregroundColor,
             ),
           ),
