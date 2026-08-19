@@ -691,8 +691,8 @@ class _PlayerFloatingButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
-      width: 65,
-      height: 65,
+      width: 60,
+      height: 60,
       child: FloatingActionButton(
         onPressed: onPressed,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -723,8 +723,8 @@ class _RandomTeamFloatingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 65,
-      height: 65,
+      width: 60,
+      height: 60,
       child: FloatingActionButton(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         heroTag: 'randomBtn',
@@ -750,8 +750,8 @@ class _BalancedTeamFloatingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 65,
-      height: 65,
+      width: 60,
+      height: 60,
       child: FloatingActionButton(
         heroTag: 'partitionBtn',
         backgroundColor: AppTheme.btnBlue3,
@@ -775,8 +775,8 @@ class _ScanFloatingButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
-      width: 65,
-      height: 65,
+      width: 60,
+      height: 60,
       child: FloatingActionButton(
         heroTag: 'scanBtn',
         onPressed: onPressed,
@@ -785,8 +785,9 @@ class _ScanFloatingButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            SizedBox(height: 5,),
             Icon(
-              Icons.document_scanner,
+              Icons.document_scanner_outlined, size: 21, 
               color: isDark ? Colors.white : Colors.black,
             ),
             Text(
