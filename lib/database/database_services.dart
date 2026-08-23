@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:teamer/database/player.dart';
 import 'package:teamer/database/team_generator.dart';
 import 'package:teamer/database/game.dart';
+import 'package:teamer/database/event_data.dart';
 import 'package:teamer/services/app_settings_service.dart';
 
 class DatabaseService {
@@ -26,6 +27,14 @@ class DatabaseService {
   final String _gamesTeamAColumnName = "teamA";
   final String _gamesTeamBColumnName = "teamB";
   final String _gamesTeamBWonColumnName = "teamBWon";
+
+  final String _eventTableName = "event_data";
+  final String _eventIDColumnName = "id";
+  final String _eventTitleColumnName = "title";
+  final String _eventImagePathColumnName = "imagePath";
+  final String _eventMarkdownTextColumnName = "markdownText";
+  final String _eventLinkColumnName = "link";
+
 
   DatabaseService._constructor();
 
@@ -69,6 +78,80 @@ class DatabaseService {
       },
     );
     return database;
+  }
+
+
+  Future<void> _ensureEventTable() async {
+    final db = await database;
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_eventTableName(
+        $_eventIDColumnName INTEGER PRIMARY KEY,
+        $_eventTitleColumnName TEXT NOT NULL,
+        $_eventImagePathColumnName TEXT NOT NULL,
+        $_eventMarkdownTextColumnName TEXT NOT NULL,
+        $_eventLinkColumnName TEXT NOT NULL
+      )
+    ''');
+
+    final existing = await db.query(
+      _eventTableName,
+      where: '$_eventIDColumnName = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+
+    if (existing.isEmpty) {
+      final defaults = EventData.defaults;
+      await db.insert(_eventTableName, {
+        _eventIDColumnName: 1,
+        _eventTitleColumnName: defaults.title,
+        _eventImagePathColumnName: defaults.imagePath,
+        _eventMarkdownTextColumnName: defaults.markdownText,
+        _eventLinkColumnName: defaults.link,
+      });
+    }
+  }
+
+  Future<EventData> getEventData() async {
+    await _ensureEventTable();
+    final db = await database;
+
+    final result = await db.query(
+      _eventTableName,
+      where: '$_eventIDColumnName = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      return EventData.defaults;
+    }
+
+    final row = result.first;
+    return EventData(
+      title: row[_eventTitleColumnName] as String,
+      imagePath: row[_eventImagePathColumnName] as String,
+      markdownText: row[_eventMarkdownTextColumnName] as String,
+      link: row[_eventLinkColumnName] as String,
+    );
+  }
+
+  Future<void> saveEventData(EventData event) async {
+    await _ensureEventTable();
+    final db = await database;
+
+    await db.insert(
+      _eventTableName,
+      {
+        _eventIDColumnName: 1,
+        _eventTitleColumnName: event.title,
+        _eventImagePathColumnName: event.imagePath,
+        _eventMarkdownTextColumnName: event.markdownText,
+        _eventLinkColumnName: event.link,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<void> resetStats() async {

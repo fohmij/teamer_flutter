@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:teamer/database/database_services.dart';
+import 'package:teamer/database/event_data.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -8,195 +12,249 @@ class StatsPage extends StatefulWidget {
 }
 
 class _StatsPageState extends State<StatsPage> {
+  final DatabaseService _databaseService = DatabaseService.instance;
+  late Future<EventData> _eventFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _eventFuture = _databaseService.getEventData();
+  }
+
+  void _reloadEvent() {
+    setState(() {
+      _eventFuture = _databaseService.getEventData();
+    });
+  }
+
+  Future<void> _openEventPage() async {
+    await Navigator.pushNamed(context, '/eventpage');
+    if (mounted) _reloadEvent();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: SingleChildScrollView(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.all(24.0),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            eventCard(),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-              eventCard(),
-              //padding: const EdgeInsets.only(top: 20.0),
-              SizedBox(
-                height: 12,
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                        child: SizedBox(
+                  Expanded(
+                    child: SizedBox(
                       height: 110,
-                      child: statsCard("SFT", Icons.event),
-                    )),
-                    SizedBox(
-                      width: 12,
+                      child: statsCard('SFT', Icons.event),
                     ),
-                    Expanded(
-                        child: SizedBox(
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
                       height: 110,
-                      child: statsCard("Alle \nStats", Icons.equalizer, page: "/all_stats"),
-                    )),
-                  ],
-                ),
+                      child: statsCard(
+                        'Alle \nStats',
+                        Icons.equalizer,
+                        page: '/all_stats',
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(
-                height: 12,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 110,
+              width: double.infinity,
+              child: statsCard(
+                'Alle \nSpiele',
+                Icons.history,
+                page: '/all_games',
               ),
-              SizedBox(
-                height: 110,
-                width: double.infinity,
-                child: statsCard("Alle \nSpiele", Icons.history, page: "/all_games"),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 110,
+              width: double.infinity,
+              child: statsCardColord(
+                'Coaching- \nZone',
+                Icons.star,
+                const Color.fromARGB(255, 221, 2, 56),
+                page: '/coachingzonepage',
               ),
-              SizedBox(
-                height: 12,
-              ),
-              SizedBox(
-                height: 110,
-                width: double.infinity,
-                child: statsCardColord("Coaching- \nZone", Icons.star, const Color.fromARGB(255, 221, 2, 56),
-                    page: '/coachingzonepage'),
-              ),
-              SizedBox(
-                height: 80,
-              ),
-            ])));
+            ),
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
+    );
   }
 
-  Card statsCard(String label, IconData icon, {Color? statsCardColor, String page = '/eventpage'}) {
+  Card statsCard(
+    String label,
+    IconData icon, {
+    Color? statsCardColor,
+    String page = '/eventpage',
+  }) {
     return Card(
       color: statsCardColor ?? Theme.of(context).cardColor,
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadiusGeometry.circular(4)
+        borderRadius: BorderRadiusGeometry.circular(4),
       ),
-      child: Stack(children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.only(top: 15, left: 15),
-          child: Text(
-            label,
-            style: TextStyle(
-                height: 1.1, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-        Positioned(
-          bottom: 16,
-          right: 20,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Icon(
-                icon,
-                size: 28,
-              ),
-            ],
-          ),
-        ),
-        Positioned.fill(
-          child: TextButton(
-            onPressed: () {
-              Navigator.pushNamed(context, page);
-            },
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.transparent,
-            ),
-            child: SizedBox
-                .shrink(), // Der Button ist unsichtbar, aber noch klickbar
-          ),
-        )
-      ]),
-    );
-  }
-
-  Card statsCardColord(String label, IconData icon, Color statsCardColor, {String page = '/eventpage'}) {
-    return Card(
-      color: statsCardColor ,
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadiusGeometry.circular(4)
-      ),
-      child: Stack(children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.only(top: 15, left: 15),
-          child: Text(
-            label,
-            style: TextStyle(
-                height: 1.1, fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-        ),
-        Positioned(
-          bottom: 16,
-          right: 20,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Icon(
-                icon,
-                size: 28,
-                color: Colors.white,
-              ),
-            ],
-          ),
-        ),
-        Positioned.fill(
-          child: TextButton(
-            onPressed: () {
-              Navigator.pushNamed(context, page);
-            },
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.transparent,
-            ),
-            child: SizedBox
-                .shrink(), // Der Button ist unsichtbar, aber noch klickbar
-          ),
-        )
-      ]),
-    );
-  }
-
-  SizedBox eventCard() {
-    return SizedBox(
-      height: 200,
-      child: Card(
-        elevation: 2,
-        child: Stack(children: <Widget>[
-          SizedBox(
-            height: 300,
-            width: 400,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Image.asset('assets/pictures/Hannover2026.png',
-                  fit: BoxFit.cover),
-            ),
-          ),
+      child: Stack(
+        children: <Widget>[
           Padding(
-            padding: const EdgeInsets.only(top: 10, left: 20),
+            padding: const EdgeInsets.only(top: 15, left: 15),
             child: Text(
-          'SFT Championships \nHannover 2026',
-              style: TextStyle(
-                  fontSize: 22,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold),
+              label,
+              style: const TextStyle(
+                height: 1.1,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+          ),
+          Positioned(
+            bottom: 16,
+            right: 20,
+            child: Icon(icon, size: 28),
           ),
           Positioned.fill(
             child: TextButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/eventpage');
+                Navigator.pushNamed(context, page);
               },
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.transparent,
-              ),
-              child: SizedBox
-                  .shrink(), // Der Button ist unsichtbar, aber noch klickbar
+              style: TextButton.styleFrom(backgroundColor: Colors.transparent),
+              child: const SizedBox.shrink(),
             ),
-          )
-        ]),
+          ),
+        ],
       ),
     );
+  }
+
+  Card statsCardColord(
+    String label,
+    IconData icon,
+    Color statsCardColor, {
+    String page = '/eventpage',
+  }) {
+    return Card(
+      color: statsCardColor,
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.circular(4),
+      ),
+      child: Stack(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(top: 15, left: 15),
+            child: Text(
+              label,
+              style: const TextStyle(
+                height: 1.1,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 16,
+            right: 20,
+            child: Icon(icon, size: 28, color: Colors.white),
+          ),
+          Positioned.fill(
+            child: TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, page);
+              },
+              style: TextButton.styleFrom(backgroundColor: Colors.transparent),
+              child: const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget eventCard() {
+    return SizedBox(
+      height: 200,
+      child: FutureBuilder<EventData>(
+        future: _eventFuture,
+        builder: (context, snapshot) {
+          final event = snapshot.data ?? EventData.defaults;
+
+          return Card(
+            elevation: 2,
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                _buildStoredImage(event.imagePath),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.48),
+                        Colors.transparent,
+                      ],
+                      stops: const [0, 0.7],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: TextButton(
+                    onPressed: _openEventPage,
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                    ),
+                    child: const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStoredImage(String imagePath) {
+    if (imagePath.startsWith('assets/')) {
+      return Image.asset(imagePath, fit: BoxFit.cover);
+    }
+
+    final file = File(imagePath);
+    if (file.existsSync()) {
+      return Image.file(file, fit: BoxFit.cover);
+    }
+
+    return Image.asset(EventData.defaultImagePath, fit: BoxFit.cover);
   }
 }
