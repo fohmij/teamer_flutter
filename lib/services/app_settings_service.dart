@@ -4,25 +4,30 @@ import 'package:teamer/database/database_services.dart';
 class AppSettings {
   final String themeMode;
   final int minGamesForFullWeight;
+  final String whatsAppGroupLink;
 
   const AppSettings({
     required this.themeMode,
     required this.minGamesForFullWeight,
+    required this.whatsAppGroupLink,
   });
 
   static const defaults = AppSettings(
     themeMode: 'system',
     minGamesForFullWeight: 5,
+    whatsAppGroupLink: '',
   );
 
   AppSettings copyWith({
     String? themeMode,
     int? minGamesForFullWeight,
+    String? whatsAppGroupLink,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       minGamesForFullWeight:
           minGamesForFullWeight ?? this.minGamesForFullWeight,
+      whatsAppGroupLink: whatsAppGroupLink ?? this.whatsAppGroupLink,
     );
   }
 }
@@ -53,10 +58,14 @@ class AppSettingsService {
     final themeMode = await _getString('themeMode') ?? AppSettings.defaults.themeMode;
     final minGames = await _getInt('minGamesForFullWeight') ??
         AppSettings.defaults.minGamesForFullWeight;
+    final whatsAppGroupLink =
+        await _getString('whatsAppGroupLink') ??
+        AppSettings.defaults.whatsAppGroupLink;
 
     return AppSettings(
       themeMode: themeMode,
       minGamesForFullWeight: minGames,
+      whatsAppGroupLink: whatsAppGroupLink,
     );
   }
 
@@ -66,6 +75,10 @@ class AppSettingsService {
 
   Future<void> updateMinGamesForFullWeight(int value) async {
     await _setString('minGamesForFullWeight', value.clamp(0, 999).toString());
+  }
+
+  Future<void> updateWhatsAppGroupLink(String value) async {
+    await _setString('whatsAppGroupLink', value.trim());
   }
 
   Future<String?> _getString(String key) async {

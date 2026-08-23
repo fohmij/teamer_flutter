@@ -33,13 +33,16 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         scrolledUnderElevation: 0, // Damit es die Farbe nicht änder wenn man die Playersliste nach unten Scrollt
-        backgroundColor: currentPageIndex == 0
-            ? (isDark
+        backgroundColor: isDark
                   ? AppTheme.navigationBarDark
-                  : AppTheme.navigationBarLight)
-            : (isDark
-                  ? AppTheme.backgroundColorDark
-                  : AppTheme.backgroundColorLight),
+                  : AppTheme.navigationBarLight,
+        // backgroundColor: currentPageIndex == 0
+        //     ? (isDark
+        //           ? AppTheme.navigationBarDark
+        //           : AppTheme.navigationBarLight)
+        //     : (isDark
+        //           ? AppTheme.backgroundColorDark
+        //           : AppTheme.backgroundColorLight),
         title: Text(appBarTitle, style: Theme.of(context).textTheme.titleLarge),
         actions: currentPageIndex == 1
             ? [

@@ -3,9 +3,12 @@ import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/database/database_services.dart';
 import 'package:teamer/database/player.dart';
+import 'package:teamer/services/app_settings_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 Future<bool> showWhatsAppPollScanDrawer(BuildContext context) async {
   final result = await showModalBottomSheet<bool>(
@@ -49,13 +52,52 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
+  Future<void> _openWhatsAppGroup() async {
+    if (_processing || _applying) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _pickAndScanScreenshot();
-    });
+    final storedLink = appSettingsController.value.whatsAppGroupLink.trim();
+
+    if (storedLink.isEmpty) {
+      setState(() {
+        _errorMessage =
+            'Kein WhatsApp-Gruppenlink hinterlegt. Lege ihn zuerst in den Einstellungen fest.';
+      });
+      return;
+    }
+
+    var normalizedLink = storedLink;
+    if (!normalizedLink.contains('://')) {
+      normalizedLink = 'https://$normalizedLink';
+    }
+
+    final uri = Uri.tryParse(normalizedLink);
+    if (uri == null || !uri.hasScheme) {
+      setState(() {
+        _errorMessage =
+            'Der hinterlegte WhatsApp-Gruppenlink ist ungültig. Bitte prüfe ihn in den Einstellungen.';
+      });
+      return;
+    }
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        setState(() {
+          _errorMessage =
+              'WhatsApp konnte mit dem hinterlegten Gruppenlink nicht geöffnet werden.';
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'WhatsApp konnte mit dem hinterlegten Gruppenlink nicht geöffnet werden.';
+      });
+    }
   }
 
   Future<void> _pickAndScanScreenshot() async {
@@ -363,7 +405,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               Text(
-                'Namen prüfen und als Vorschlag übernehmen',
+                'WhatsApp öffnen oder Screenshot auswählen',
                 style: Theme.of(
                   context,
                 ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
@@ -427,25 +469,89 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
   }
 
   Widget _buildInitialState(ScrollController scrollController) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasGroupLink =
+        appSettingsController.value.whatsAppGroupLink.trim().isNotEmpty;
+
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.only(top: 28),
       children: [
-        Icon(Icons.image_search, size: 72, color: AppTheme.grey600),
+        Icon(MdiIcons.whatsapp, size: 68, color: AppTheme.grey600),
         const SizedBox(height: 18),
         Text(
-          'Wähle einen Screenshot aus deiner Galerie aus.',
+          'Öffne zuerst deine WhatsApp-Gruppe und erstelle dort den Screenshot der Umfrage.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        const SizedBox(height: 10),
-        Center(
+        const SizedBox(height: 18),
+        SizedBox(
+          width: double.infinity,
           child: TextButton.icon(
+            onPressed: _openWhatsAppGroup,
+            style: TextButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 37, 211, 102),
+            ),
+            icon: Icon(MdiIcons.whatsapp, color: Colors.white),
+            label: Text(
+              'WhatsApp-Gruppe öffnen',
+              style: Theme.of(context).textTheme.displaySmall,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 16,
+              color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                hasGroupLink
+                    ? 'Gruppenlink kannst du in den Einstellungen ändern.'
+                    : 'Gruppenlink zuerst in den Einstellungen festlegen.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppTheme.grey600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'danach',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppTheme.grey600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
             onPressed: _pickAndScanScreenshot,
-            icon: const Icon(Icons.upload_file, color: Colors.white),
+            icon: Icon(
+              Icons.upload_file,
+              color: isDark ? Colors.white : AppTheme.grey700,
+            ),
             label: Text(
               'Screenshot hochladen',
-              style: Theme.of(context).textTheme.displaySmall,
+              style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
         ),
@@ -672,6 +778,30 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
     final hasSelectedSuggestions = _suggestions.any((s) => s.selected);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    if (!_scanWasStarted && _suggestions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+              foregroundColor: Colors.white,
+              side: BorderSide(
+                color: isDark ? Colors.transparent : AppTheme.grey300,
+                width: 1,
+              ),
+            ),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Abbrechen',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 20),
       child: Row(
@@ -709,7 +839,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Text(
-                        'Neu scannen',
+                        _scanWasStarted ? 'Neu scannen' : 'Screenshot wählen',
                         style: Theme.of(context).textTheme.displaySmall,
                       ),
               ),

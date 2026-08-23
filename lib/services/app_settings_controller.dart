@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:teamer/services/app_settings_service.dart';
 
@@ -18,6 +19,12 @@ class AppSettingsController extends ValueNotifier<AppSettings> {
   Future<void> setMinGamesForFullWeight(int minGames) async {
     await _settingsService.updateMinGamesForFullWeight(minGames);
     value = value.copyWith(minGamesForFullWeight: minGames);
+  }
+
+  Future<void> setWhatsAppGroupLink(String groupLink) async {
+    final trimmedLink = groupLink.trim();
+    await _settingsService.updateWhatsAppGroupLink(trimmedLink);
+    value = value.copyWith(whatsAppGroupLink: trimmedLink);
   }
 
   ThemeMode get flutterThemeMode {

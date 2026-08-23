@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static const Color backgroundColorLight = Color.fromARGB(255, 243, 250, 236);
-  static const Color backgroundColorDark = Color.fromARGB(255, 26, 24, 32);
+  static const Color backgroundColorDark = Color.fromARGB(255, 34, 33, 40);
   static const Color navigationBarLight = Color.fromARGB(255, 233, 230, 226);
-  static const Color navigationBarDark = Color.fromARGB(255, 34, 32, 43);
+  static const Color navigationBarDark = Color.fromARGB(255, 44, 46, 58);
   static const Color playerSelected = Color.fromARGB(255, 139, 204, 101);
   static const Color grey200 = Color.fromARGB(255, 238, 238, 238);
   static const Color grey300 = Color.fromARGB(255, 224, 224, 224);

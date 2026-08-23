@@ -13,6 +13,8 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _minGamesController;
   late final FocusNode _minGamesFocusNode;
+  late final TextEditingController _whatsAppGroupLinkController;
+  late final FocusNode _whatsAppGroupLinkFocusNode;
 
   @override
   void initState() {
@@ -21,12 +23,18 @@ class _SettingsPageState extends State<SettingsPage> {
       text: appSettingsController.value.minGamesForFullWeight.toString(),
     );
     _minGamesFocusNode = FocusNode();
+    _whatsAppGroupLinkController = TextEditingController(
+      text: appSettingsController.value.whatsAppGroupLink,
+    );
+    _whatsAppGroupLinkFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
     _minGamesController.dispose();
     _minGamesFocusNode.dispose();
+    _whatsAppGroupLinkController.dispose();
+    _whatsAppGroupLinkFocusNode.dispose();
     super.dispose();
   }
 
@@ -48,6 +56,12 @@ class _SettingsPageState extends State<SettingsPage> {
     await appSettingsController.setMinGamesForFullWeight(newValue);
   }
 
+  Future<void> _saveWhatsAppGroupLink() async {
+    final groupLink = _whatsAppGroupLinkController.text.trim();
+    _whatsAppGroupLinkController.text = groupLink;
+    await appSettingsController.setWhatsAppGroupLink(groupLink);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -65,10 +79,16 @@ class _SettingsPageState extends State<SettingsPage> {
           valueListenable: appSettingsController,
           builder: (context, settings, _) {
             final currentMinGames = settings.minGamesForFullWeight.toString();
+            final currentWhatsAppGroupLink = settings.whatsAppGroupLink;
 
             if (!_minGamesFocusNode.hasFocus &&
                 _minGamesController.text != currentMinGames) {
               _minGamesController.text = currentMinGames;
+            }
+
+            if (!_whatsAppGroupLinkFocusNode.hasFocus &&
+                _whatsAppGroupLinkController.text != currentWhatsAppGroupLink) {
+              _whatsAppGroupLinkController.text = currentWhatsAppGroupLink;
             }
 
             return ListView(
@@ -116,6 +136,91 @@ class _SettingsPageState extends State<SettingsPage> {
                             await appSettingsController.setThemeMode(value);
                           },
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionTitle('WhatsApp-Scan'),
+                _SettingsGroup(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.chat_outlined,
+                                size: 26,
+                                color: isDark
+                                    ? AppTheme.grey300
+                                    : AppTheme.grey700,
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'WhatsApp-Gruppenlink',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'Wird beim Scan-Button direkt in WhatsApp geöffnet',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: AppTheme.grey600,
+                                            fontSize: 13,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _whatsAppGroupLinkController,
+                            focusNode: _whatsAppGroupLinkFocusNode,
+                            keyboardType: TextInputType.url,
+                            textInputAction: TextInputAction.done,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(fontSize: 15),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              hintText: 'https://chat.whatsapp.com/...',
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: (_) => _saveWhatsAppGroupLink(),
+                            onEditingComplete: () {
+                              _saveWhatsAppGroupLink();
+                              _whatsAppGroupLinkFocusNode.unfocus();
+                            },
+                            onTapOutside: (_) {
+                              _saveWhatsAppGroupLink();
+                              _whatsAppGroupLinkFocusNode.unfocus();
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   ],
