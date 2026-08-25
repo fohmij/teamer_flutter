@@ -492,10 +492,10 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
             style: TextButton.styleFrom(
               backgroundColor: const Color.fromARGB(255, 37, 211, 102),
             ),
-            icon: Icon(MdiIcons.whatsapp, color: Colors.white),
+            icon: Icon(MdiIcons.whatsapp, color: Colors.black),
             label: Text(
               'WhatsApp-Gruppe öffnen',
-              style: Theme.of(context).textTheme.displaySmall,
+              style: TextStyle(color: Colors.black),
             ),
           ),
         ),

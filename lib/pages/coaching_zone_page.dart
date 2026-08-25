@@ -290,6 +290,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
                 height: 1.1,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.black, 
               ),
             ),
           ),
@@ -299,7 +300,7 @@ class _CoachingZonePageState extends State<CoachingZonePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: [Icon(icon, size: 30)],
+              children: [Icon(icon, size: 30, color: Colors.black,)],
             ),
           ),
           Positioned.fill(
