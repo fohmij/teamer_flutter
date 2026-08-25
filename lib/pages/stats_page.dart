@@ -114,7 +114,6 @@ class _StatsPageState extends State<StatsPage> {
                         'Alle \nSpiele',
                         Icons.history,
                         page: '/all_games',
-                        statsCardColor: Colors.deepOrangeAccent,
                       ),
                     ),
                   ),
@@ -265,7 +264,7 @@ class _StatsPageState extends State<StatsPage> {
 
   Card whatsAppCard() {
     return Card(
-      color: const Color.fromARGB(255, 37, 211, 102),
+      color: Theme.of(context).cardColor,
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(4),
