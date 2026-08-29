@@ -43,11 +43,7 @@ class _StatsPageState extends State<StatsPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Kein WhatsApp-Gruppenlink hinterlegt.',
-          ),
-        ),
+        const SnackBar(content: Text('Kein WhatsApp-Gruppenlink hinterlegt.')),
       );
       return;
     }
@@ -65,33 +61,23 @@ class _StatsPageState extends State<StatsPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Der hinterlegte WhatsApp-Gruppenlink ist ungültig.',
-          ),
+          content: Text('Der hinterlegte WhatsApp-Gruppenlink ist ungültig.'),
         ),
       );
       return;
     }
 
-    final opened = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'WhatsApp konnte nicht geöffnet werden.',
-          ),
-        ),
+        const SnackBar(content: Text('WhatsApp konnte nicht geöffnet werden.')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: SingleChildScrollView(
@@ -171,9 +157,7 @@ class _StatsPageState extends State<StatsPage> {
     return Card(
       color: statsCardColor ?? Theme.of(context).cardColor,
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       child: Stack(
         children: <Widget>[
           Padding(
@@ -187,22 +171,13 @@ class _StatsPageState extends State<StatsPage> {
               ),
             ),
           ),
-          Positioned(
-            bottom: 16,
-            right: 20,
-            child: Icon(
-              icon,
-              size: 28,
-            ),
-          ),
+          Positioned(bottom: 16, right: 20, child: Icon(icon, size: 28)),
           Positioned.fill(
             child: TextButton(
               onPressed: () {
                 Navigator.pushNamed(context, page);
               },
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.transparent,
-              ),
+              style: TextButton.styleFrom(backgroundColor: Colors.transparent),
               child: const SizedBox.shrink(),
             ),
           ),
@@ -220,9 +195,7 @@ class _StatsPageState extends State<StatsPage> {
     return Card(
       color: statsCardColor,
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       child: Stack(
         children: <Widget>[
           Padding(
@@ -240,20 +213,14 @@ class _StatsPageState extends State<StatsPage> {
           Positioned(
             bottom: 16,
             right: 20,
-            child: Icon(
-              icon,
-              size: 28,
-              color: Colors.white,
-            ),
+            child: Icon(icon, size: 28, color: Colors.white),
           ),
           Positioned.fill(
             child: TextButton(
               onPressed: () {
                 Navigator.pushNamed(context, page);
               },
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.transparent,
-              ),
+              style: TextButton.styleFrom(backgroundColor: Colors.transparent),
               child: const SizedBox.shrink(),
             ),
           ),
@@ -263,15 +230,15 @@ class _StatsPageState extends State<StatsPage> {
   }
 
   Card whatsAppCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       color: Theme.of(context).cardColor,
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       child: Stack(
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 15, left: 15),
             child: Text(
               'WhatsApp-\nGruppe',
@@ -279,7 +246,7 @@ class _StatsPageState extends State<StatsPage> {
                 height: 1.1,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
           ),
@@ -289,15 +256,13 @@ class _StatsPageState extends State<StatsPage> {
             child: Icon(
               MdiIcons.whatsapp,
               size: 28,
-              color: Colors.black,
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
           Positioned.fill(
             child: TextButton(
               onPressed: _openWhatsAppGroup,
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.transparent,
-              ),
+              style: TextButton.styleFrom(backgroundColor: Colors.transparent),
               child: const SizedBox.shrink(),
             ),
           ),
@@ -372,24 +337,15 @@ class _StatsPageState extends State<StatsPage> {
 
   Widget _buildStoredImage(String imagePath) {
     if (imagePath.startsWith('assets/')) {
-      return Image.asset(
-        imagePath,
-        fit: BoxFit.cover,
-      );
+      return Image.asset(imagePath, fit: BoxFit.cover);
     }
 
     final file = File(imagePath);
 
     if (file.existsSync()) {
-      return Image.file(
-        file,
-        fit: BoxFit.cover,
-      );
+      return Image.file(file, fit: BoxFit.cover);
     }
 
-    return Image.asset(
-      EventData.defaultImagePath,
-      fit: BoxFit.cover,
-    );
+    return Image.asset(EventData.defaultImagePath, fit: BoxFit.cover);
   }
 }

@@ -4,6 +4,7 @@ import 'package:teamer/database/database_services.dart';
 import 'package:teamer/database/player.dart';
 import 'package:teamer/database/game.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'package:teamer/services/app_settings_controller.dart';
 
 class AllStatsPage extends StatefulWidget {
   const AllStatsPage({super.key});
@@ -20,6 +21,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
   bool _loading = true;
   bool _hideZeroAttendance = true;
   bool _legendExpanded = false;
+
   List<Player> _players = [];
   List<Game> _games = [];
   int _gamesCount = 0;
@@ -37,12 +39,21 @@ class _AllStatsPageState extends State<AllStatsPage> {
     players.sort((a, b) => b.winRate.compareTo(a.winRate));
 
     if (!mounted) return;
+
     setState(() {
       _players = players;
       _games = games;
       _gamesCount = games.length;
       _loading = false;
     });
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.pushNamed(context, '/settings');
+
+    if (!mounted) return;
+
+    setState(() {});
   }
 
   void _showPlayerStats(Player player) {
@@ -71,10 +82,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
       _players.sort((a, b) {
         final aValue = getField(a);
         final bValue = getField(b);
+
         return ascending
             ? Comparable.compare(aValue, bValue)
             : Comparable.compare(bValue, aValue);
       });
+
       _sortColumnIndex = columnIndex;
       _sortAscending = ascending;
     });
@@ -94,10 +107,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
       ),
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
             : _players.isEmpty
-            ? _buildEmptyState()
-            : _buildStatsContent(),
+                ? _buildEmptyState()
+                : _buildStatsContent(),
       ),
       extendBody: true,
     );
@@ -108,7 +123,11 @@ class _AllStatsPageState extends State<AllStatsPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.equalizer, size: 54, color: AppTheme.grey600),
+          const Icon(
+            Icons.equalizer,
+            size: 54,
+            color: AppTheme.grey600,
+          ),
           const SizedBox(height: 14),
           Text(
             'Keine Spieler gefunden',
@@ -118,9 +137,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
           Text(
             'Füge zuerst Spieler hinzu, dann erscheinen hier die Statistiken.',
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppTheme.grey600,
+                ),
           ),
         ],
       ),
@@ -136,7 +155,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
           const SizedBox(height: 12),
           _buildAttendanceToggle(),
           const SizedBox(height: 12),
-          Expanded(child: _buildTableCard()),
+          Expanded(
+            child: _buildTableCard(),
+          ),
           const SizedBox(height: 6),
         ],
       ),
@@ -145,10 +166,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
 
   Widget _buildSummaryCard() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final totalAttendance = _players.fold<int>(
       0,
       (sum, p) => sum + p.attendance,
     );
+
     final averageAttendance = _players.isEmpty
         ? 0.0
         : totalAttendance / _players.length;
@@ -157,7 +180,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.grey700 : AppTheme.cardColorLight,
+        color: isDark
+            ? AppTheme.grey700
+            : AppTheme.cardColorLight,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
@@ -190,9 +215,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
                       'Übersicht, Sortieren, Vergleichen',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppTheme.grey600,
+                          ),
                     ),
                   ],
                 ),
@@ -215,10 +240,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
                     label: 'Ø Anw.',
                     value: averageAttendance.toStringAsFixed(1),
                   ),
-                  _StatsChip(label: 'Spiele', value: _gamesCount.toString()),
+                  _StatsChip(
+                    label: 'Spiele',
+                    value: _gamesCount.toString(),
+                  ),
                 ],
               ),
-              // _buildResetButton(),
             ],
           ),
         ],
@@ -228,7 +255,11 @@ class _AllStatsPageState extends State<AllStatsPage> {
 
   Widget _buildAttendanceToggle() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hiddenPlayersCount = _players.where((p) => p.attendance == 0).length;
+    final minGames = appSettingsController.value.minGamesForFullWeight;
+
+    final hiddenPlayersCount = _players
+        .where((player) => player.attendance < minGames)
+        .length;
 
     return Material(
       color: Colors.transparent,
@@ -241,9 +272,14 @@ class _AllStatsPageState extends State<AllStatsPage> {
         },
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 8,
+          ),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.navigationBarDark : Colors.white,
+            color: isDark
+                ? AppTheme.navigationBarDark
+                : Colors.white,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Column(
@@ -251,38 +287,84 @@ class _AllStatsPageState extends State<AllStatsPage> {
               Row(
                 children: [
                   Icon(
-                    Icons.visibility_off_outlined,
+                    Icons.filter_alt_outlined,
                     size: 20,
-                    color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                    color: isDark
+                        ? AppTheme.grey300
+                        : AppTheme.grey700,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Nur mit S > 0',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const SizedBox(width: 18),
-                        Flexible(
-                          child: Text(
-                            '$hiddenPlayersCount Spieler betroffen',
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  fontSize: 13,
-                                  color: AppTheme.grey600,
+                        Wrap(
+                          spacing: 5,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Nur mit S ≥',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+
+                            // Klick auf die Zahl -> Einstellungen
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _openSettings,
+                                borderRadius: BorderRadius.circular(4),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? AppTheme.btnBlue2
+                                        : AppTheme.primaryBlue,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '$minGames',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                          ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '$hiddenPlayersCount Spieler betroffen',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                fontSize: 11,
+                                color: AppTheme.grey600,
+                              ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 6),
                   Transform.scale(
                     scale: 0.8,
                     child: Switch(
@@ -296,6 +378,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                       },
                     ),
                   ),
+                  const SizedBox(width: 2),
                   AnimatedRotation(
                     turns: _legendExpanded ? 0.5 : 0.0,
                     duration: const Duration(milliseconds: 180),
@@ -303,13 +386,17 @@ class _AllStatsPageState extends State<AllStatsPage> {
                     child: Icon(
                       Icons.keyboard_arrow_down,
                       size: 24,
-                      color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                      color: isDark
+                          ? AppTheme.grey300
+                          : AppTheme.grey700,
                     ),
                   ),
                 ],
               ),
               AnimatedCrossFade(
-                firstChild: const SizedBox(width: double.infinity),
+                firstChild: const SizedBox(
+                  width: double.infinity,
+                ),
                 secondChild: _buildStatsLegend(),
                 crossFadeState: _legendExpanded
                     ? CrossFadeState.showSecond
@@ -330,24 +417,83 @@ class _AllStatsPageState extends State<AllStatsPage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Divider(
             height: 1,
-            color: isDark ? AppTheme.grey700 : AppTheme.grey300,
+            color: isDark
+                ? AppTheme.grey700
+                : AppTheme.grey300,
           ),
           const SizedBox(height: 10),
+
           Padding(
-            padding: const EdgeInsets.only(left: 8.0),
+            padding: const EdgeInsets.only(left: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.filter_alt_outlined,
+                  size: 17,
+                  color: AppTheme.grey600,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Filtergrenze: S ≥ Mindestspiele',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(
+                              fontSize: 12,
+                              color: AppTheme.grey600,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tippe auf die Zahl oben, um den Wert in den Einstellungen zu ändern.',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(
+                              fontSize: 11,
+                              color: AppTheme.grey600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          const Padding(
+            padding: EdgeInsets.only(left: 8),
             child: Row(
               children: [
                 Text(
                   'W:\nL:\nD:\nS:\n%:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight(600)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                SizedBox(width: 10,),
+                SizedBox(width: 10),
                 Text(
-                  'Siege\nNiederlagen\nUnentschieden\nSpiele\nSiegquote in Prozent',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight(300)),
+                  'Siege\n'
+                  'Niederlagen\n'
+                  'Unentschieden\n'
+                  'Spiele\n'
+                  'Siegquote in Prozent',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
               ],
             ),
@@ -359,41 +505,57 @@ class _AllStatsPageState extends State<AllStatsPage> {
 
   Widget _buildTableCard() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final minGames =
+        appSettingsController.value.minGamesForFullWeight;
+
     final visiblePlayers = _hideZeroAttendance
-        ? _players.where((player) => player.attendance > 0).toList()
+        ? _players
+            .where(
+              (player) => player.attendance >= minGames,
+            )
+            .toList()
         : _players;
-    final isEmptyColor = isDark ? AppTheme.grey600 : AppTheme.grey400;
+
+    final isEmptyColor = isDark
+        ? AppTheme.grey600
+        : AppTheme.grey400;
 
     if (visiblePlayers.isEmpty) {
       return Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.navigationBarDark : Colors.white,
+          color: isDark
+              ? AppTheme.navigationBarDark
+              : Colors.white,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                SizedBox(height: 120),
-                Icon(Icons.info_outline, size: 35, color: isEmptyColor),
-                SizedBox(height: 8),
-                Text(
-                  'Keine Spieler mit',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: isEmptyColor),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 35,
+                color: isEmptyColor,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Keine Spieler mit',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isEmptyColor,
                 ),
-                Text(
-                  'Anwesenheit > 0',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isEmptyColor,
-                    fontWeight: FontWeight(700),
-                  ),
+              ),
+              Text(
+                'Anwesenheit ≥ $minGames',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isEmptyColor,
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -403,7 +565,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
       borderRadius: BorderRadius.circular(4),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.navigationBarDark : Colors.white,
+          color: isDark
+              ? AppTheme.navigationBarDark
+              : Colors.white,
           borderRadius: BorderRadius.circular(4),
         ),
         child: DataTable2(
@@ -414,7 +578,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
           sortColumnIndex: _sortColumnIndex,
           sortAscending: _sortAscending,
           headingRowColor: WidgetStatePropertyAll(
-            isDark ? AppTheme.grey700 : AppTheme.cardColorLight,
+            isDark
+                ? AppTheme.grey700
+                : AppTheme.cardColorLight,
           ),
           dividerThickness: 0.7,
           columnSpacing: 1,
@@ -424,46 +590,55 @@ class _AllStatsPageState extends State<AllStatsPage> {
             DataColumn2(
               label: const Text('Name'),
               fixedWidth: 105,
-              onSort: (i, asc) => _sort((p) => p.name.toLowerCase(), i, asc),
+              onSort: (i, asc) =>
+                  _sort((p) => p.name.toLowerCase(), i, asc),
             ),
             DataColumn2(
               label: const Text('W'),
               fixedWidth: 25,
               minWidth: 35,
               numeric: true,
-              onSort: (i, asc) => _sort((p) => p.wins, i, asc),
+              onSort: (i, asc) =>
+                  _sort((p) => p.wins, i, asc),
             ),
             DataColumn2(
               label: const Text('L'),
               fixedWidth: 25,
               minWidth: 35,
               numeric: true,
-              onSort: (i, asc) => _sort((p) => p.losses, i, asc),
+              onSort: (i, asc) =>
+                  _sort((p) => p.losses, i, asc),
             ),
             DataColumn2(
               label: const Text('D'),
               fixedWidth: 25,
               minWidth: 35,
               numeric: true,
-              onSort: (i, asc) =>
-                  _sort((p) => p.attendance - (p.wins + p.losses), i, asc),
+              onSort: (i, asc) => _sort(
+                (p) => p.attendance - (p.wins + p.losses),
+                i,
+                asc,
+              ),
             ),
             DataColumn2(
               label: const Text('S'),
               fixedWidth: 25,
               minWidth: 35,
               numeric: true,
-              onSort: (i, asc) => _sort((p) => p.attendance, i, asc),
+              onSort: (i, asc) =>
+                  _sort((p) => p.attendance, i, asc),
             ),
             DataColumn2(
               label: const Text('%'),
               fixedWidth: 55,
               numeric: true,
-              onSort: (i, asc) => _sort((p) => p.winRate, i, asc),
+              onSort: (i, asc) =>
+                  _sort((p) => p.winRate, i, asc),
             ),
           ],
           rows: visiblePlayers.map((player) {
-            final int draws = player.attendance - (player.wins + player.losses);
+            final int draws =
+                player.attendance - (player.wins + player.losses);
 
             return DataRow(
               cells: [
@@ -473,10 +648,13 @@ class _AllStatsPageState extends State<AllStatsPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     softWrap: false,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
                   ),
                   onTap: () => _showPlayerStats(player),
                 ),
@@ -497,7 +675,9 @@ class _AllStatsPageState extends State<AllStatsPage> {
                   onTap: () => _showPlayerStats(player),
                 ),
                 DataCell(
-                  _StatText((player.winRate * 100).toStringAsFixed(1)),
+                  _StatText(
+                    (player.winRate * 100).toStringAsFixed(1),
+                  ),
                   onTap: () => _showPlayerStats(player),
                 ),
               ],
@@ -513,14 +693,20 @@ class _StatsChip extends StatelessWidget {
   final String label;
   final String value;
 
-  const _StatsChip({required this.label, required this.value});
+  const _StatsChip({
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
         color: isDark
             ? AppTheme.navigationBarDark
@@ -535,7 +721,9 @@ class _StatsChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+              color: isDark
+                  ? AppTheme.grey300
+                  : AppTheme.grey700,
             ),
           ),
           const SizedBox(width: 5),
@@ -543,7 +731,9 @@ class _StatsChip extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? AppTheme.grey400 : AppTheme.grey700,
+              color: isDark
+                  ? AppTheme.grey400
+                  : AppTheme.grey700,
             ),
           ),
         ],
@@ -565,9 +755,9 @@ class _StatText extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        fontSize: 15,
-        fontWeight: FontWeight.w300,
-      ),
+            fontSize: 15,
+            fontWeight: FontWeight.w300,
+          ),
     );
   }
 }
@@ -582,13 +772,19 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
   });
 
   String _resultForGame(Game game) {
-    if (game.teamBWon == -1) return 'Remis';
+    if (game.teamBWon == -1) {
+      return 'Remis';
+    }
 
     final isTeamA = game.teamA.contains(player.id);
-    final won = (isTeamA && game.teamBWon == 0) ||
+
+    final won =
+        (isTeamA && game.teamBWon == 0) ||
         (!isTeamA && game.teamBWon == 1);
 
-    return won ? 'Sieg' : 'Niederlage';
+    return won
+        ? 'Sieg'
+        : 'Niederlage';
   }
 
   Color _resultColor(String result) {
@@ -605,7 +801,10 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final draws = player.attendance - player.wins - player.losses;
+
+    final draws =
+        player.attendance - player.wins - player.losses;
+
     final backgroundColor = isDark
         ? AppTheme.backgroundColorDark
         : AppTheme.backgroundColorLight;
@@ -630,14 +829,21 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
                 width: 44,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: AppTheme.grey600.withValues(alpha: 0.45),
+                  color: AppTheme.grey600.withValues(
+                    alpha: 0.45,
+                  ),
                   borderRadius: BorderRadius.circular(100),
                 ),
               ),
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    18,
+                    18,
+                    18,
+                    24,
+                  ),
                   children: [
                     _buildHeader(context, isDark),
                     const SizedBox(height: 14),
@@ -659,7 +865,10 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark) {
+  Widget _buildHeader(
+    BuildContext context,
+    bool isDark,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -669,82 +878,120 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontSize: 28,
-            ),
+                  fontSize: 28,
+                ),
           ),
         ),
         const SizedBox(width: 12),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8.0,
+            vertical: 4.0,
+          ),
           decoration: BoxDecoration(
-            color: isDark 
-            ? AppTheme.grey700
-            : AppTheme.cardColorLight,
+            color: isDark
+                ? AppTheme.grey700
+                : AppTheme.cardColorLight,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
             '${(player.winRate * 100).toStringAsFixed(1)}%',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontSize: 28,
-              color: isDark ? AppTheme.grey300 : AppTheme.grey700,
-            ),
+                  fontSize: 28,
+                  color: isDark
+                      ? AppTheme.grey300
+                      : AppTheme.grey700,
+                ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatsRow(BuildContext context, int draws) {
+  Widget _buildStatsRow(
+    BuildContext context,
+    int draws,
+  ) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        _PlayerStatChip(label: 'Spiele', value: '${player.attendance}'),
-        _PlayerStatChip(label: 'Siege', value: '${player.wins}'),
-        _PlayerStatChip(label: 'Niederlagen', value: '${player.losses}'),
-        _PlayerStatChip(label: 'Draws', value: '$draws'),
+        _PlayerStatChip(
+          label: 'Spiele',
+          value: '${player.attendance}',
+        ),
+        _PlayerStatChip(
+          label: 'Siege',
+          value: '${player.wins}',
+        ),
+        _PlayerStatChip(
+          label: 'Niederlagen',
+          value: '${player.losses}',
+        ),
+        _PlayerStatChip(
+          label: 'Draws',
+          value: '$draws',
+        ),
       ],
     );
   }
 
-  Widget _buildGamesList(BuildContext context, bool isDark) {
+  Widget _buildGamesList(
+    BuildContext context,
+    bool isDark,
+  ) {
     if (games.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 28,
+        ),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.navigationBarDark : Colors.white,
+          color: isDark
+              ? AppTheme.navigationBarDark
+              : Colors.white,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
           'Keine Spiele gefunden',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppTheme.grey600,
-          ),
+                color: AppTheme.grey600,
+              ),
         ),
       );
     }
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.navigationBarDark : Colors.white,
+        color: isDark
+            ? AppTheme.navigationBarDark
+            : Colors.white,
         borderRadius: BorderRadius.circular(4),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: isDark ? AppTheme.grey700 : AppTheme.cardColorLight,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 10,
+            ),
+            color: isDark
+                ? AppTheme.grey700
+                : AppTheme.cardColorLight,
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     'Name',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                 ),
                 SizedBox(
@@ -752,9 +999,12 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
                   child: Text(
                     'Ergebnis',
                     textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                 ),
               ],
@@ -768,7 +1018,9 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
               height: 1,
               indent: 16,
               endIndent: 16,
-              color: isDark ? AppTheme.grey700 : AppTheme.grey300,
+              color: isDark
+                  ? AppTheme.grey700
+                  : AppTheme.grey300,
             ),
             itemBuilder: (context, index) {
               final game = games[index];
@@ -787,9 +1039,12 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
                         game.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontSize: 16,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(
+                              fontSize: 16,
+                            ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -842,9 +1097,14 @@ class _PlayerStatChip extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.navigationBarDark : Colors.white,
+        color: isDark
+            ? AppTheme.navigationBarDark
+            : Colors.white,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -855,7 +1115,9 @@ class _PlayerStatChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+              color: isDark
+                  ? AppTheme.grey300
+                  : AppTheme.grey700,
             ),
           ),
           const SizedBox(width: 5),
@@ -863,7 +1125,9 @@ class _PlayerStatChip extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? AppTheme.grey400 : AppTheme.grey700,
+              color: isDark
+                  ? AppTheme.grey400
+                  : AppTheme.grey700,
             ),
           ),
         ],
@@ -871,4 +1135,3 @@ class _PlayerStatChip extends StatelessWidget {
     );
   }
 }
-
