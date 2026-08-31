@@ -27,6 +27,24 @@ class AppSettingsController extends ValueNotifier<AppSettings> {
     value = value.copyWith(whatsAppGroupLink: trimmedLink);
   }
 
+  Future<void> setBlockedWords(List<String> blockedWords) async {
+    final cleanedWords = <String>[];
+    final normalizedWords = <String>{};
+
+    for (final word in blockedWords) {
+      final cleanedWord = word.trim();
+      if (cleanedWord.isEmpty) continue;
+
+      final normalizedWord = cleanedWord.toLowerCase();
+      if (!normalizedWords.add(normalizedWord)) continue;
+
+      cleanedWords.add(cleanedWord);
+    }
+
+    await _settingsService.updateBlockedWords(cleanedWords);
+    value = value.copyWith(blockedWords: cleanedWords);
+  }
+
   ThemeMode get flutterThemeMode {
     switch (value.themeMode) {
       case 'light':

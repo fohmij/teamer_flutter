@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:teamer/database/database_services.dart';
 
@@ -5,29 +7,34 @@ class AppSettings {
   final String themeMode;
   final int minGamesForFullWeight;
   final String whatsAppGroupLink;
+  final List<String> blockedWords;
 
   const AppSettings({
     required this.themeMode,
     required this.minGamesForFullWeight,
     required this.whatsAppGroupLink,
+    required this.blockedWords,
   });
 
   static const defaults = AppSettings(
     themeMode: 'system',
     minGamesForFullWeight: 5,
     whatsAppGroupLink: '',
+    blockedWords: ['ich', 'nicht', 'da', 'stimmabgaben'],
   );
 
   AppSettings copyWith({
     String? themeMode,
     int? minGamesForFullWeight,
     String? whatsAppGroupLink,
+    List<String>? blockedWords,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       minGamesForFullWeight:
           minGamesForFullWeight ?? this.minGamesForFullWeight,
       whatsAppGroupLink: whatsAppGroupLink ?? this.whatsAppGroupLink,
+      blockedWords: blockedWords ?? this.blockedWords,
     );
   }
 }
@@ -61,11 +68,14 @@ class AppSettingsService {
     final whatsAppGroupLink =
         await _getString('whatsAppGroupLink') ??
         AppSettings.defaults.whatsAppGroupLink;
+    final blockedWordsRaw = await _getString('blockedWords');
+    final blockedWords = _decodeBlockedWords(blockedWordsRaw);
 
     return AppSettings(
       themeMode: themeMode,
       minGamesForFullWeight: minGames,
       whatsAppGroupLink: whatsAppGroupLink,
+      blockedWords: blockedWords,
     );
   }
 
@@ -79,6 +89,45 @@ class AppSettingsService {
 
   Future<void> updateWhatsAppGroupLink(String value) async {
     await _setString('whatsAppGroupLink', value.trim());
+  }
+
+  Future<void> updateBlockedWords(List<String> blockedWords) async {
+    final cleanedWords = _cleanBlockedWords(blockedWords);
+    await _setString('blockedWords', jsonEncode(cleanedWords));
+  }
+
+  List<String> _decodeBlockedWords(String? rawValue) {
+    if (rawValue == null) {
+      return List<String>.from(AppSettings.defaults.blockedWords);
+    }
+
+    try {
+      final decoded = jsonDecode(rawValue);
+      if (decoded is! List) {
+        return List<String>.from(AppSettings.defaults.blockedWords);
+      }
+
+      return _cleanBlockedWords(decoded.map((value) => value.toString()));
+    } catch (_) {
+      return List<String>.from(AppSettings.defaults.blockedWords);
+    }
+  }
+
+  List<String> _cleanBlockedWords(Iterable<String> blockedWords) {
+    final cleanedWords = <String>[];
+    final normalizedWords = <String>{};
+
+    for (final word in blockedWords) {
+      final cleanedWord = word.trim();
+      if (cleanedWord.isEmpty) continue;
+
+      final normalizedWord = cleanedWord.toLowerCase();
+      if (!normalizedWords.add(normalizedWord)) continue;
+
+      cleanedWords.add(cleanedWord);
+    }
+
+    return cleanedWords;
   }
 
   Future<String?> _getString(String key) async {

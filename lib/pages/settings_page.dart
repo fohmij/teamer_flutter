@@ -15,6 +15,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late final FocusNode _minGamesFocusNode;
   late final TextEditingController _whatsAppGroupLinkController;
   late final FocusNode _whatsAppGroupLinkFocusNode;
+  late final TextEditingController _blockedWordsController;
+  late final FocusNode _blockedWordsFocusNode;
 
   @override
   void initState() {
@@ -27,6 +29,10 @@ class _SettingsPageState extends State<SettingsPage> {
       text: appSettingsController.value.whatsAppGroupLink,
     );
     _whatsAppGroupLinkFocusNode = FocusNode();
+    _blockedWordsController = TextEditingController(
+      text: appSettingsController.value.blockedWords.join(', '),
+    );
+    _blockedWordsFocusNode = FocusNode();
   }
 
   @override
@@ -35,6 +41,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _minGamesFocusNode.dispose();
     _whatsAppGroupLinkController.dispose();
     _whatsAppGroupLinkFocusNode.dispose();
+    _blockedWordsController.dispose();
+    _blockedWordsFocusNode.dispose();
     super.dispose();
   }
 
@@ -62,6 +70,19 @@ class _SettingsPageState extends State<SettingsPage> {
     await appSettingsController.setWhatsAppGroupLink(groupLink);
   }
 
+  Future<void> _saveBlockedWords() async {
+    final blockedWords = _blockedWordsController.text
+        .split(',')
+        .map((word) => word.trim())
+        .where((word) => word.isNotEmpty)
+        .toList();
+
+    await appSettingsController.setBlockedWords(blockedWords);
+
+    _blockedWordsController.text =
+        appSettingsController.value.blockedWords.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -80,6 +101,7 @@ class _SettingsPageState extends State<SettingsPage> {
           builder: (context, settings, _) {
             final currentMinGames = settings.minGamesForFullWeight.toString();
             final currentWhatsAppGroupLink = settings.whatsAppGroupLink;
+            final currentBlockedWords = settings.blockedWords.join(', ');
 
             if (!_minGamesFocusNode.hasFocus &&
                 _minGamesController.text != currentMinGames) {
@@ -89,6 +111,11 @@ class _SettingsPageState extends State<SettingsPage> {
             if (!_whatsAppGroupLinkFocusNode.hasFocus &&
                 _whatsAppGroupLinkController.text != currentWhatsAppGroupLink) {
               _whatsAppGroupLinkController.text = currentWhatsAppGroupLink;
+            }
+
+            if (!_blockedWordsFocusNode.hasFocus &&
+                _blockedWordsController.text != currentBlockedWords) {
+              _blockedWordsController.text = currentBlockedWords;
             }
 
             return ListView(
@@ -223,6 +250,87 @@ class _SettingsPageState extends State<SettingsPage> {
                         ],
                       ),
                     ),
+                    const _SettingsDivider(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.filter_alt_off_outlined,
+                                size: 26,
+                                color: isDark
+                                    ? AppTheme.grey300
+                                    : AppTheme.grey700,
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Blockierte Scan-Wörter',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'Kommagetrennte Wörter oder Phrasen, die nicht als Spieler erkannt werden sollen',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: AppTheme.grey600,
+                                            fontSize: 13,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _blockedWordsController,
+                            focusNode: _blockedWordsFocusNode,
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.done,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(fontSize: 15),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              hintText: 'ich, nicht, da, stimmabgaben',
+                              helperText: 'Leer lassen = kein Wortfilter',
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: (_) => _saveBlockedWords(),
+                            onEditingComplete: () {
+                              _saveBlockedWords();
+                              _blockedWordsFocusNode.unfocus();
+                            },
+                            onTapOutside: (_) {
+                              _saveBlockedWords();
+                              _blockedWordsFocusNode.unfocus();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -248,7 +356,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
                           ),
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             isDense: true,
                             contentPadding: EdgeInsets.symmetric(vertical: 6),
                             border: OutlineInputBorder(),
@@ -432,9 +540,11 @@ class _AboutTile extends StatelessWidget {
             'Die intelligente Teameinteilung sucht nach der besten Aufteilung der ausgewählten Spieler in zwei Teams. Technisch ist das ein Partition-Problem: Es werden mögliche Team-Kombinationen verglichen und die Variante mit dem kleinsten Unterschied ausgewählt.\n\n'
             'Als Stärke wird die Siegquote eines Spielers verwendet. Spieler, die weniger als die eingestellte Anzahl an Mindestspielen haben, werden nicht mit ihrer echten Siegquote, sondern neutral mit 0.5 berücksichtigt. Dadurch werden neue Spieler nicht durch wenige zufällige Ergebnisse zu stark bewertet.\n\n'
             'Verglichen wird nicht die Summe der Teamstärken, sondern die Durchschnittsstärke pro Team. Dadurch bleibt der Vergleich fair, auch wenn ein Team bei ungerader Spielerzahl eine Person mehr hat.',
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(height: 1.35, fontSize: 14, fontWeight: FontWeight(300)),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              height: 1.35,
+              fontSize: 14,
+              fontWeight: FontWeight.w300,
+            ),
           ),
         ],
       ),

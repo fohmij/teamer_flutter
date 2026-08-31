@@ -129,9 +129,6 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
       final recognizedText = await _recognizeText(pickedImage.path);
       final extractedNames = _extractNamesFromRecognizedText(recognizedText);
 
-      debugPrint('===== OCR RAW TEXT START =====');
-      debugPrint(recognizedText.text);
-      debugPrint('===== OCR RAW TEXT END =====');
 
       final players = await _databaseService.getPlayers();
       final suggestions = _buildSuggestions(
@@ -219,21 +216,37 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
   bool _looksLikeName(String value) {
     if (value.length < 3 || value.length > 40) return false;
 
-    final lowerValue = value.toLowerCase();
-    final blockedWords = [
-      'ich',
-      'nicht',
-      ' da',
-      'stimmabgaben'
-    ];
+    final blockedWords = appSettingsController.value.blockedWords;
 
-    if (blockedWords.any(lowerValue.contains)) return false;
+    if (blockedWords.any((word) => _containsBlockedWord(value, word))) {
+      return false;
+    }
     if (RegExp(r'[0-9%@:/\\]').hasMatch(value)) return false;
 
     return RegExp(
       r"^[A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’.\- ]+$",
       unicode: true,
     ).hasMatch(value);
+  }
+
+  bool _containsBlockedWord(String value, String blockedWord) {
+    final term = blockedWord.trim();
+    if (term.isEmpty) return false;
+
+    final escapedTerm = RegExp.escape(term);
+
+    // Einzelne Wörter werden als ganze Wörter erkannt. Dadurch blockiert
+    // z. B. "ich" nicht versehentlich einen Namen wie "Michael".
+    if (!term.contains(RegExp(r'\s'))) {
+      final wordPattern = RegExp(
+        '(^|[^A-Za-zÀ-ÖØ-öø-ÿĀ-ž])$escapedTerm(\$|[^A-Za-zÀ-ÖØ-öø-ÿĀ-ž])',
+        caseSensitive: false,
+        unicode: true,
+      );
+      return wordPattern.hasMatch(value);
+    }
+
+    return value.toLowerCase().contains(term.toLowerCase());
   }
 
   List<_ScanSuggestion> _buildSuggestions({
