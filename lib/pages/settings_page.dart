@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/services/app_settings_controller.dart';
+import 'package:teamer/services/app_settings_service.dart';
+import 'package:teamer/services/reminder_notification_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -11,12 +13,18 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const String _groupLinkSection = 'groupLink';
+  static const String _blockedWordsSection = 'blockedWords';
+
   late final TextEditingController _minGamesController;
   late final FocusNode _minGamesFocusNode;
   late final TextEditingController _whatsAppGroupLinkController;
   late final FocusNode _whatsAppGroupLinkFocusNode;
   late final TextEditingController _blockedWordsController;
   late final FocusNode _blockedWordsFocusNode;
+
+  String? _expandedWhatsAppSection;
+  int? _expandedReminderId;
 
   @override
   void initState() {
@@ -79,8 +87,150 @@ class _SettingsPageState extends State<SettingsPage> {
 
     await appSettingsController.setBlockedWords(blockedWords);
 
-    _blockedWordsController.text =
-        appSettingsController.value.blockedWords.join(', ');
+    _blockedWordsController.text = appSettingsController.value.blockedWords
+        .join(', ');
+  }
+
+  Future<void> _toggleWhatsAppSection(String section) async {
+    final oldSection = _expandedWhatsAppSection;
+
+    if (oldSection == section) {
+      await _saveWhatsAppSection(section);
+      _unfocusWhatsAppSection(section);
+
+      if (!mounted) return;
+      setState(() {
+        _expandedWhatsAppSection = null;
+      });
+      return;
+    }
+
+    if (oldSection != null) {
+      await _saveWhatsAppSection(oldSection);
+      _unfocusWhatsAppSection(oldSection);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _expandedWhatsAppSection = section;
+    });
+  }
+
+  Future<void> _saveWhatsAppSection(String section) async {
+    if (section == _groupLinkSection) {
+      await _saveWhatsAppGroupLink();
+    } else if (section == _blockedWordsSection) {
+      await _saveBlockedWords();
+    }
+  }
+
+  void _unfocusWhatsAppSection(String section) {
+    if (section == _groupLinkSection) {
+      _whatsAppGroupLinkFocusNode.unfocus();
+    } else if (section == _blockedWordsSection) {
+      _blockedWordsFocusNode.unfocus();
+    }
+  }
+
+  Future<void> _openReminderEditor({WeeklyReminder? reminder}) async {
+    final result = await showDialog<_ReminderDialogResult>(
+      context: context,
+      builder: (_) => _ReminderDialog(reminder: reminder),
+    );
+
+    if (result == null || !mounted) return;
+
+    try {
+      if (result.deleteRequested) {
+        if (reminder == null) return;
+
+        await ReminderNotificationService.instance.cancelWeeklyReminder(
+          reminder.id,
+        );
+        await appSettingsController.removeWeeklyReminder(reminder.id);
+        if (mounted) {
+          setState(() {
+            _expandedReminderId = null;
+          });
+        }
+        return;
+      }
+
+      if (reminder == null) {
+        final permissionGranted = await ReminderNotificationService.instance
+            .requestPermissions();
+
+        if (!permissionGranted) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Benachrichtigungen sind nicht erlaubt. Der Reminder wurde nicht gespeichert.',
+              ),
+            ),
+          );
+          return;
+        }
+
+        final createdReminder = await appSettingsController.addWeeklyReminder(
+          name: result.name,
+          weekday: result.weekday,
+          hour: result.hour,
+          minute: result.minute,
+        );
+
+        try {
+          await ReminderNotificationService.instance.scheduleWeeklyReminder(
+            createdReminder,
+          );
+          if (mounted) {
+            setState(() {
+              _expandedReminderId = null;
+            });
+          }
+        } catch (_) {
+          await appSettingsController.removeWeeklyReminder(createdReminder.id);
+          rethrow;
+        }
+      } else {
+        final updatedReminder = reminder.copyWith(
+          name: result.name,
+          weekday: result.weekday,
+          hour: result.hour,
+          minute: result.minute,
+        );
+
+        await appSettingsController.updateWeeklyReminder(updatedReminder);
+
+        try {
+          await ReminderNotificationService.instance.scheduleWeeklyReminder(
+            updatedReminder,
+          );
+          if (mounted) {
+            setState(() {
+              _expandedReminderId = null;
+            });
+          }
+        } catch (_) {
+          await appSettingsController.updateWeeklyReminder(reminder);
+          try {
+            await ReminderNotificationService.instance.scheduleWeeklyReminder(
+              reminder,
+            );
+          } catch (_) {
+            // Der alte Reminder bleibt zumindest in den Einstellungen erhalten.
+          }
+          rethrow;
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reminder konnte nicht gespeichert werden: $error'),
+        ),
+      );
+    }
   }
 
   @override
@@ -165,178 +315,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const _SectionTitle('WhatsApp-Scan'),
-                _SettingsGroup(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.chat_outlined,
-                                size: 26,
-                                color: isDark
-                                    ? AppTheme.grey300
-                                    : AppTheme.grey700,
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'WhatsApp-Gruppenlink',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      'Wird beim Scan-Button direkt in WhatsApp geöffnet',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: AppTheme.grey600,
-                                            fontSize: 13,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _whatsAppGroupLinkController,
-                            focusNode: _whatsAppGroupLinkFocusNode,
-                            keyboardType: TextInputType.url,
-                            textInputAction: TextInputAction.done,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(fontSize: 15),
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              hintText: 'https://chat.whatsapp.com/...',
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                              border: OutlineInputBorder(),
-                            ),
-                            onSubmitted: (_) => _saveWhatsAppGroupLink(),
-                            onEditingComplete: () {
-                              _saveWhatsAppGroupLink();
-                              _whatsAppGroupLinkFocusNode.unfocus();
-                            },
-                            onTapOutside: (_) {
-                              _saveWhatsAppGroupLink();
-                              _whatsAppGroupLinkFocusNode.unfocus();
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
                     const _SettingsDivider(),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.filter_alt_off_outlined,
-                                size: 26,
-                                color: isDark
-                                    ? AppTheme.grey300
-                                    : AppTheme.grey700,
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Blockierte Scan-Wörter',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      'Kommagetrennte Wörter oder Phrasen, die nicht als Spieler erkannt werden sollen',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: AppTheme.grey600,
-                                            fontSize: 13,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _blockedWordsController,
-                            focusNode: _blockedWordsFocusNode,
-                            keyboardType: TextInputType.text,
-                            textInputAction: TextInputAction.done,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(fontSize: 15),
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              hintText: 'ich, nicht, da, stimmabgaben',
-                              helperText: 'Leer lassen = kein Wortfilter',
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                              border: OutlineInputBorder(),
-                            ),
-                            onSubmitted: (_) => _saveBlockedWords(),
-                            onEditingComplete: () {
-                              _saveBlockedWords();
-                              _blockedWordsFocusNode.unfocus();
-                            },
-                            onTapOutside: (_) {
-                              _saveBlockedWords();
-                              _blockedWordsFocusNode.unfocus();
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const _SectionTitle('Intelligente Teameinteilung'),
-                _SettingsGroup(
-                  children: [
                     _SettingsRow(
                       icon: Icons.sports_score_outlined,
                       title: 'Mindestspiele',
@@ -373,8 +352,134 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionTitle('WhatsApp-Scan'),
+                _SettingsGroup(
+                  children: [
+                    _ExpandableSettingsRow(
+                      icon: Icons.chat_outlined,
+                      title: 'WhatsApp-Gruppenlink',
+                      subtitle:
+                          'Wird beim Scan-Button direkt in WhatsApp geöffnet',
+                      expanded: _expandedWhatsAppSection == _groupLinkSection,
+                      onTap: () => _toggleWhatsAppSection(_groupLinkSection),
+                      child: TextField(
+                        controller: _whatsAppGroupLinkController,
+                        focusNode: _whatsAppGroupLinkFocusNode,
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.done,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(fontSize: 15),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          hintText: 'https://chat.whatsapp.com/...',
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                        onSubmitted: (_) => _saveWhatsAppGroupLink(),
+                        onEditingComplete: () {
+                          _saveWhatsAppGroupLink();
+                          _whatsAppGroupLinkFocusNode.unfocus();
+                        },
+                        onTapOutside: (_) {
+                          _saveWhatsAppGroupLink();
+                          _whatsAppGroupLinkFocusNode.unfocus();
+                        },
+                      ),
+                    ),
                     const _SettingsDivider(),
-                    const _AboutTile(),
+                    _ExpandableSettingsRow(
+                      icon: Icons.filter_alt_off_outlined,
+                      title: 'Blockierte Scan-Wörter',
+                      subtitle:
+                          'Wörter oder Phrasen, die nicht als Spieler erkannt werden sollen',
+                      expanded:
+                          _expandedWhatsAppSection == _blockedWordsSection,
+                      onTap: () => _toggleWhatsAppSection(_blockedWordsSection),
+                      child: TextField(
+                        controller: _blockedWordsController,
+                        focusNode: _blockedWordsFocusNode,
+                        keyboardType: TextInputType.text,
+                        textInputAction: TextInputAction.done,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(fontSize: 15),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          hintText: 'ich, nicht, da, stimmabgaben',
+                          helperText: 'Kommagetrennt · leer = kein Wortfilter',
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                        onSubmitted: (_) => _saveBlockedWords(),
+                        onEditingComplete: () {
+                          _saveBlockedWords();
+                          _blockedWordsFocusNode.unfocus();
+                        },
+                        onTapOutside: (_) {
+                          _saveBlockedWords();
+                          _blockedWordsFocusNode.unfocus();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionTitle('Trainings-Reminder'),
+                _SettingsGroup(
+                  children: [
+                    if (settings.weeklyReminders.isEmpty)
+                      const _EmptyReminderRow()
+                    else
+                      for (
+                        int i = 0;
+                        i < settings.weeklyReminders.length;
+                        i++
+                      ) ...[
+                        _ExpandableReminderRow(
+                          reminder: settings.weeklyReminders[i],
+                          expanded:
+                              _expandedReminderId ==
+                              settings.weeklyReminders[i].id,
+                          onTap: () {
+                            setState(() {
+                              final reminderId =
+                                  settings.weeklyReminders[i].id;
+                              _expandedReminderId =
+                                  _expandedReminderId == reminderId
+                                  ? null
+                                  : reminderId;
+                            });
+                          },
+                          onEdit: () => _openReminderEditor(
+                            reminder: settings.weeklyReminders[i],
+                          ),
+                        ),
+                        if (i < settings.weeklyReminders.length - 1)
+                          const _SettingsDivider(),
+                      ],
+                    const _SettingsDivider(),
+                    _AddReminderRow(onTap: () => _openReminderEditor()),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionTitle('Intelligente Teameinteilung'),
+                const _SettingsGroup(
+                  children: [
+                    _AboutTile(),
                   ],
                 ),
               ],
@@ -418,7 +523,9 @@ class _SettingsGroup extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.navigationBarDark : AppTheme.navigationBarLight,
+        color: isDark
+            ? AppTheme.navigationBarDark
+            : AppTheme.navigationBarLight,
         borderRadius: BorderRadius.circular(4),
       ),
       clipBehavior: Clip.antiAlias,
@@ -486,6 +593,309 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
+class _ExpandableSettingsRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool expanded;
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _ExpandableSettingsRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.expanded,
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 26,
+                    color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: AppTheme.grey600, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
+            child: child,
+          ),
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 180),
+          sizeCurve: Curves.easeInOut,
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyReminderRow extends StatelessWidget {
+  const _EmptyReminderRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.notifications_none,
+            size: 26,
+            color: AppTheme.grey600,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              'Noch keine wöchentlichen Reminder eingerichtet',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppTheme.grey600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExpandableReminderRow extends StatelessWidget {
+  final WeeklyReminder reminder;
+  final bool expanded;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+
+  const _ExpandableReminderRow({
+    required this.reminder,
+    required this.expanded,
+    required this.onTap,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    size: 26,
+                    color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      reminder.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 17,
+                        color: AppTheme.grey600,
+                      ),
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          _weekdayLabel(reminder.weekday),
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppTheme.grey600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Icon(
+                        Icons.schedule,
+                        size: 18,
+                        color: AppTheme.grey600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_formatTime(reminder.hour, reminder.minute)} Uhr',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.grey600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  tooltip: 'Reminder bearbeiten',
+                  onPressed: onEdit,
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 21,
+                    color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 180),
+          sizeCurve: Curves.easeInOut,
+        ),
+      ],
+    );
+  }
+}
+
+class _AddReminderRow extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AddReminderRow({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(
+                Icons.add_alert_outlined,
+                size: 26,
+                color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Reminder hinzufügen',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Name, Wochentag und Uhrzeit festlegen',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppTheme.grey600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                Icons.add,
+                color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingsDivider extends StatelessWidget {
   const _SettingsDivider();
 
@@ -500,6 +910,241 @@ class _SettingsDivider extends StatelessWidget {
       color: isDark ? AppTheme.grey700 : AppTheme.grey300,
     );
   }
+}
+
+class _ReminderDialog extends StatefulWidget {
+  final WeeklyReminder? reminder;
+
+  const _ReminderDialog({this.reminder});
+
+  @override
+  State<_ReminderDialog> createState() => _ReminderDialogState();
+}
+
+class _ReminderDialogState extends State<_ReminderDialog> {
+  late final TextEditingController _nameController;
+  late int _weekday;
+  late TimeOfDay _time;
+
+  @override
+  void initState() {
+    super.initState();
+    final reminder = widget.reminder;
+
+    _nameController = TextEditingController(text: reminder?.name ?? '');
+    _weekday = reminder?.weekday ?? DateTime.monday;
+    _time = TimeOfDay(
+      hour: reminder?.hour ?? 18,
+      minute: reminder?.minute ?? 0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+
+    Navigator.of(context).pop(
+      _ReminderDialogResult(
+        name: name,
+        weekday: _weekday,
+        hour: _time.hour,
+        minute: _time.minute,
+      ),
+    );
+  }
+
+  Future<void> _pickTime() async {
+    final newTime = await showTimePicker(
+      context: context,
+      initialTime: _time,
+      helpText: 'Uhrzeit für den Reminder',
+      cancelText: 'Abbrechen',
+      confirmText: 'OK',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (newTime == null || !mounted) return;
+    setState(() {
+      _time = newTime;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEditing = widget.reminder != null;
+
+    return AlertDialog(
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      title: Row(
+        children: [
+          Icon(isEditing ? Icons.edit_notifications : Icons.add_alert),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isEditing ? 'Reminder bearbeiten' : 'Reminder hinzufügen',
+              style: Theme.of(context).textTheme.displayLarge,
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 560,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameController,
+              autofocus: !isEditing,
+              textInputAction: TextInputAction.next,
+              style: Theme.of(context).textTheme.bodyMedium,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                hintText: 'z. B. Mittwochstraining',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<int>(
+              initialValue: _weekday,
+              decoration: const InputDecoration(
+                labelText: 'Wochentag',
+                border: OutlineInputBorder(),
+              ),
+              dropdownColor: isDark ? AppTheme.navigationBarDark : Colors.white,
+              items: List.generate(7, (index) {
+                final weekday = index + 1;
+                return DropdownMenuItem(
+                  value: weekday,
+                  child: Text(_weekdayLabel(weekday)),
+                );
+              }),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _weekday = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: _pickTime,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Uhrzeit',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.schedule),
+                ),
+                child: Text(
+                  '${_formatTime(_time.hour, _time.minute)} Uhr',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ),
+            if (isEditing) ...[
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.deleteRed,
+                    side: const BorderSide(color: AppTheme.deleteRed),
+                  ),
+                  onPressed: () {
+                    Navigator.of(
+                      context,
+                    ).pop(const _ReminderDialogResult.delete());
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Reminder löschen'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      actions: [
+        Row(
+          children: [
+            SizedBox(
+              height: 40,
+              width: 135,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
+                  side: BorderSide(
+                    color: isDark ? Colors.transparent : AppTheme.grey300,
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Abbrechen',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              height: 40,
+              width: 135,
+              child: TextButton(
+                onPressed: _save,
+                child: Text(
+                  'Speichern',
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ReminderDialogResult {
+  final String name;
+  final int weekday;
+  final int hour;
+  final int minute;
+  final bool deleteRequested;
+
+  const _ReminderDialogResult({
+    required this.name,
+    required this.weekday,
+    required this.hour,
+    required this.minute,
+  }) : deleteRequested = false;
+
+  const _ReminderDialogResult.delete()
+    : name = '',
+      weekday = DateTime.monday,
+      hour = 0,
+      minute = 0,
+      deleteRequested = true;
 }
 
 class _AboutTile extends StatelessWidget {
@@ -550,4 +1195,29 @@ class _AboutTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _weekdayLabel(int weekday) {
+  switch (weekday) {
+    case DateTime.monday:
+      return 'Montag';
+    case DateTime.tuesday:
+      return 'Dienstag';
+    case DateTime.wednesday:
+      return 'Mittwoch';
+    case DateTime.thursday:
+      return 'Donnerstag';
+    case DateTime.friday:
+      return 'Freitag';
+    case DateTime.saturday:
+      return 'Samstag';
+    case DateTime.sunday:
+      return 'Sonntag';
+    default:
+      return 'Unbekannt';
+  }
+}
+
+String _formatTime(int hour, int minute) {
+  return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 }

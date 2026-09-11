@@ -10,6 +10,7 @@ import 'package:teamer/pages/settings_page.dart';
 import 'package:teamer/pages/team_analysis_page.dart';
 import 'package:teamer/services/app_settings_controller.dart';
 import 'package:teamer/pages/pdf_viewer_page.dart';
+import 'package:teamer/services/reminder_notification_service.dart';
 
 import 'package:teamer/app_theme/app_theme.dart';
 
@@ -25,6 +26,15 @@ void main() async {
   // make flutter draw behind navigation bar
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   await appSettingsController.load();
+  try {
+    await ReminderNotificationService.instance.initialize();
+
+    await ReminderNotificationService.instance.syncWeeklyReminders(
+      appSettingsController.value.weeklyReminders,
+    );
+  } catch (error) {
+    debugPrint('Reminder-Initialisierung fehlgeschlagen: $error');
+  }
   runApp(const MyApp());
 }
 
