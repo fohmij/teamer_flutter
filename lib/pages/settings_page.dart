@@ -177,6 +177,8 @@ class _SettingsPageState extends State<SettingsPage> {
           weekday: result.weekday,
           hour: result.hour,
           minute: result.minute,
+          playSound: result.playSound,
+          enableVibration: result.enableVibration,
         );
 
         try {
@@ -198,6 +200,8 @@ class _SettingsPageState extends State<SettingsPage> {
           weekday: result.weekday,
           hour: result.hour,
           minute: result.minute,
+          playSound: result.playSound,
+          enableVibration: result.enableVibration,
         );
 
         await appSettingsController.updateWeeklyReminder(updatedReminder);
@@ -777,39 +781,103 @@ class _ExpandableReminderRow extends StatelessWidget {
           secondChild: Padding(
             padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 17,
-                        color: AppTheme.grey600,
-                      ),
-                      const SizedBox(width: 7),
-                      Flexible(
-                        child: Text(
-                          _weekdayLabel(reminder.weekday),
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppTheme.grey600,
-                            fontSize: 13,
+                      Wrap(
+                        spacing: 14,
+                        runSpacing: 6,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 17,
+                                color: AppTheme.grey600,
+                              ),
+                              const SizedBox(width: 7),
+                              Text(
+                                _weekdayLabel(reminder.weekday),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: AppTheme.grey600,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            ],
                           ),
-                        ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.schedule,
+                                size: 18,
+                                color: AppTheme.grey600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${_formatTime(reminder.hour, reminder.minute)} Uhr',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: AppTheme.grey600,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      Icon(
-                        Icons.schedule,
-                        size: 18,
-                        color: AppTheme.grey600,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${_formatTime(reminder.hour, reminder.minute)} Uhr',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.grey600,
-                          fontSize: 13,
-                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            reminder.playSound
+                                ? Icons.volume_up_outlined
+                                : Icons.volume_off_outlined,
+                            size: 17,
+                            color: AppTheme.grey600,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            reminder.playSound ? 'Ton' : 'Kein Ton',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: AppTheme.grey600,
+                                  fontSize: 12,
+                                ),
+                          ),
+                          const SizedBox(width: 14),
+                          Icon(
+                            reminder.enableVibration
+                                ? Icons.vibration
+                                : Icons.phone_android_outlined,
+                            size: 17,
+                            color: AppTheme.grey600,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            reminder.enableVibration
+                                ? 'Vibration'
+                                : 'Keine Vibration',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: AppTheme.grey600,
+                                  fontSize: 12,
+                                ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -925,6 +993,8 @@ class _ReminderDialogState extends State<_ReminderDialog> {
   late final TextEditingController _nameController;
   late int _weekday;
   late TimeOfDay _time;
+  late bool _playSound;
+  late bool _enableVibration;
 
   @override
   void initState() {
@@ -937,6 +1007,8 @@ class _ReminderDialogState extends State<_ReminderDialog> {
       hour: reminder?.hour ?? 18,
       minute: reminder?.minute ?? 0,
     );
+    _playSound = reminder?.playSound ?? true;
+    _enableVibration = reminder?.enableVibration ?? true;
   }
 
   @override
@@ -955,6 +1027,8 @@ class _ReminderDialogState extends State<_ReminderDialog> {
         weekday: _weekday,
         hour: _time.hour,
         minute: _time.minute,
+        playSound: _playSound,
+        enableVibration: _enableVibration,
       ),
     );
   }
@@ -1063,6 +1137,53 @@ class _ReminderDialogState extends State<_ReminderDialog> {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                _playSound
+                    ? Icons.volume_up_outlined
+                    : Icons.volume_off_outlined,
+              ),
+              title: Text(
+                'Ton',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              value: _playSound,
+              activeThumbColor: AppTheme.primaryBlue.withAlpha(120),
+              activeTrackColor: AppTheme.primaryBlue,
+              onChanged: (value) {
+                setState(() {
+                  _playSound = value;
+                });
+              },
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                _enableVibration
+                    ? Icons.vibration
+                    : Icons.phone_android_outlined,
+              ),
+              title: Text(
+                'Vibration',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              value: _enableVibration,
+              activeThumbColor: AppTheme.primaryBlue.withAlpha(120),
+              activeTrackColor: AppTheme.primaryBlue,
+              onChanged: (value) {
+                setState(() {
+                  _enableVibration = value;
+                });
+              },
+            ),
             if (isEditing) ...[
               const SizedBox(height: 18),
               SizedBox(
@@ -1130,6 +1251,8 @@ class _ReminderDialogResult {
   final int weekday;
   final int hour;
   final int minute;
+  final bool playSound;
+  final bool enableVibration;
   final bool deleteRequested;
 
   const _ReminderDialogResult({
@@ -1137,6 +1260,8 @@ class _ReminderDialogResult {
     required this.weekday,
     required this.hour,
     required this.minute,
+    required this.playSound,
+    required this.enableVibration,
   }) : deleteRequested = false;
 
   const _ReminderDialogResult.delete()
@@ -1144,6 +1269,8 @@ class _ReminderDialogResult {
       weekday = DateTime.monday,
       hour = 0,
       minute = 0,
+      playSound = true,
+      enableVibration = true,
       deleteRequested = true;
 }
 

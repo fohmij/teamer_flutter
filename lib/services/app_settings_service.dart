@@ -9,6 +9,8 @@ class WeeklyReminder {
   final int weekday;
   final int hour;
   final int minute;
+  final bool playSound;
+  final bool enableVibration;
 
   const WeeklyReminder({
     required this.id,
@@ -16,6 +18,8 @@ class WeeklyReminder {
     required this.weekday,
     required this.hour,
     required this.minute,
+    this.playSound = true,
+    this.enableVibration = true,
   });
 
   WeeklyReminder copyWith({
@@ -24,6 +28,8 @@ class WeeklyReminder {
     int? weekday,
     int? hour,
     int? minute,
+    bool? playSound,
+    bool? enableVibration,
   }) {
     return WeeklyReminder(
       id: id ?? this.id,
@@ -31,6 +37,8 @@ class WeeklyReminder {
       weekday: weekday ?? this.weekday,
       hour: hour ?? this.hour,
       minute: minute ?? this.minute,
+      playSound: playSound ?? this.playSound,
+      enableVibration: enableVibration ?? this.enableVibration,
     );
   }
 
@@ -41,6 +49,8 @@ class WeeklyReminder {
       'weekday': weekday,
       'hour': hour,
       'minute': minute,
+      'playSound': playSound,
+      'enableVibration': enableVibration,
     };
   }
 
@@ -51,6 +61,12 @@ class WeeklyReminder {
       weekday: (json['weekday'] as num).toInt().clamp(1, 7).toInt(),
       hour: (json['hour'] as num).toInt().clamp(0, 23).toInt(),
       minute: (json['minute'] as num).toInt().clamp(0, 59).toInt(),
+      // Alte gespeicherte Reminder hatten diese Felder noch nicht.
+      // Deshalb bleiben Ton und Vibration dort standardmäßig aktiviert.
+      playSound: json['playSound'] is bool ? json['playSound'] as bool : true,
+      enableVibration: json['enableVibration'] is bool
+          ? json['enableVibration'] as bool
+          : true,
     );
   }
 }

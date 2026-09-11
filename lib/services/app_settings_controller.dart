@@ -50,6 +50,8 @@ class AppSettingsController extends ValueNotifier<AppSettings> {
     required int weekday,
     required int hour,
     required int minute,
+    bool playSound = true,
+    bool enableVibration = true,
   }) async {
     final reminder = WeeklyReminder(
       id: _nextReminderId(),
@@ -57,6 +59,8 @@ class AppSettingsController extends ValueNotifier<AppSettings> {
       weekday: weekday.clamp(1, 7).toInt(),
       hour: hour.clamp(0, 23).toInt(),
       minute: minute.clamp(0, 59).toInt(),
+      playSound: playSound,
+      enableVibration: enableVibration,
     );
 
     final reminders = [...value.weeklyReminders, reminder];

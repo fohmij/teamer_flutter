@@ -127,26 +127,65 @@ class ReminderNotificationService {
     final androidScheduleMode = await _androidScheduleMode();
     final scheduledDate = _nextOccurrence(reminder);
 
+    final channel = _androidChannelFor(reminder);
+
     await _notifications.zonedSchedule(
       id: reminder.id,
-      title: 'Training: ${reminder.name}',
-      body: 'WhatsApp-Umfrage für das Training einstellen.',
+      title: reminder.name,
       scheduledDate: scheduledDate,
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          'training_reminders',
-          'Trainings-Reminder',
-          channelDescription:
-              'Wöchentliche Erinnerungen zum Erstellen der WhatsApp-Umfragen',
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
           importance: Importance.high,
           priority: Priority.high,
+          playSound: reminder.playSound,
+          enableVibration: reminder.enableVibration,
         ),
-        iOS: DarwinNotificationDetails(),
-        macOS: DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(
+          presentSound: reminder.playSound,
+        ),
+        macOS: DarwinNotificationDetails(
+          presentSound: reminder.playSound,
+        ),
       ),
       androidScheduleMode: androidScheduleMode,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       payload: 'weekly_reminder:${reminder.id}',
+    );
+  }
+
+  _ReminderAndroidChannel _androidChannelFor(WeeklyReminder reminder) {
+    if (reminder.playSound && reminder.enableVibration) {
+      return const _ReminderAndroidChannel(
+        id: 'training_reminders_sound_vibration',
+        name: 'Trainings-Reminder – Ton & Vibration',
+        description:
+            'Wöchentliche Trainings-Reminder mit Ton und Vibration',
+      );
+    }
+
+    if (reminder.playSound) {
+      return const _ReminderAndroidChannel(
+        id: 'training_reminders_sound',
+        name: 'Trainings-Reminder – Ton',
+        description: 'Wöchentliche Trainings-Reminder nur mit Ton',
+      );
+    }
+
+    if (reminder.enableVibration) {
+      return const _ReminderAndroidChannel(
+        id: 'training_reminders_vibration',
+        name: 'Trainings-Reminder – Vibration',
+        description: 'Wöchentliche Trainings-Reminder nur mit Vibration',
+      );
+    }
+
+    return const _ReminderAndroidChannel(
+      id: 'training_reminders_silent',
+      name: 'Trainings-Reminder – Lautlos',
+      description: 'Wöchentliche Trainings-Reminder ohne Ton und Vibration',
     );
   }
 
@@ -204,4 +243,17 @@ class ReminderNotificationService {
     return id >= _firstReminderNotificationId &&
         id <= _lastReminderNotificationId;
   }
+}
+
+
+class _ReminderAndroidChannel {
+  final String id;
+  final String name;
+  final String description;
+
+  const _ReminderAndroidChannel({
+    required this.id,
+    required this.name,
+    required this.description,
+  });
 }
