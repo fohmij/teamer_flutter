@@ -1,3 +1,4 @@
+// VERSION 2026-11-09: Mehrere gleich gute intelligente Teamaufteilungen.
 import 'package:flutter/material.dart';
 import 'package:teamer/database/database_services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
@@ -511,9 +512,13 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
       return;
     }
 
-    await _databaseService.optimizedTeam();
+    final alternatives = await _databaseService.optimizedTeam();
     if (!mounted) return;
-    Navigator.pushNamed(context, '/team_analysis').then((_) {
+    Navigator.pushNamed(
+      context,
+      '/team_analysis',
+      arguments: alternatives,
+    ).then((_) {
       if (!mounted) return;
       setState(() {
         _playersFuture = _databaseService.getPlayers();

@@ -1,3 +1,4 @@
+// VERSION 2026-11-09: Mehrere gleich gute intelligente Teamaufteilungen.
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:teamer/database/player.dart';
@@ -542,22 +543,11 @@ class DatabaseService {
     });
   }
 
-  Future<void> optimizedTeam() async {
-    List<Player> players = await getPlayersWithStatsFromGames();
-    List<Player> activePlayers = players.where((p) => p.status == 1).toList();
-
-    if (activePlayers.isEmpty) return;
-
-    final settings = await AppSettingsService.instance.getSettings();
-    TeamSplitResult result = splitPlayersByWinRate(
-      activePlayers,
-      minGamesForFullWeight: settings.minGamesForFullWeight,
-    );
-
+  // Speichert eine komplette Team-Variante atomar, auch beim Durchblättern.
+  Future<void> saveTeamSplit(TeamSplitResult result) async {
     final db = await database;
-
     await db.transaction((txn) async {
-      for (Player player in result.playersTeamA) {
+      for (final player in result.playersTeamA) {
         await txn.update(
           _playersTableName,
           {_playersTeamColumnName: 0},
@@ -565,7 +555,7 @@ class DatabaseService {
           whereArgs: [player.id],
         );
       }
-      for (Player player in result.playersTeamB) {
+      for (final player in result.playersTeamB) {
         await txn.update(
           _playersTableName,
           {_playersTeamColumnName: 1},
@@ -576,20 +566,32 @@ class DatabaseService {
     });
   }
 
+  // Berechnet einmal alle gleich guten besten Aufteilungen, speichert die
+  // erste und gibt die Varianten an die Team-Analyse weiter.
+  Future<OptimalTeamSplits> optimizedTeam() async {
+    final players = await getPlayersWithStatsFromGames();
+    final activePlayers = players.where((p) => p.status == 1).toList();
+    final settings = await AppSettingsService.instance.getSettings();
+    final alternatives = await findOptimalTeamSplits(
+      activePlayers,
+      minGamesForFullWeight: settings.minGamesForFullWeight,
+    );
+
+    if (alternatives.count > 0) {
+      await saveTeamSplit(alternatives.resultAt(0));
+    }
+    return alternatives;
+  }
 
   Future<TeamSplitResult> getOptimizedTeamPreview() async {
     final settings = await AppSettingsService.instance.getSettings();
     final players = await getPlayersWithStatsFromGames();
     final activePlayers = players.where((p) => p.status == 1).toList();
-
-    if (activePlayers.isEmpty) {
-      return TeamSplitResult(teamA: [], teamB: []);
-    }
-
-    return splitPlayersByWinRate(
+    final alternatives = await findOptimalTeamSplits(
       activePlayers,
       minGamesForFullWeight: settings.minGamesForFullWeight,
     );
+    return alternatives.resultAt(0);
   }
 
   Future<double> getWinRateDifference() async {
