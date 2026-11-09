@@ -1,4 +1,4 @@
-// VERSION 2026-11-09: Optimale Varianten auch mit frei vorgegebenen Teamgrößen.
+// VERSION 2026-11-09 (STAERKE-NAVIGATION): Pfeile wechseln nur eindeutige Staerkekombinationen.
 import 'package:flutter/foundation.dart';
 import 'player.dart';
 
@@ -46,13 +46,60 @@ class OptimalTeamSplits {
   final List<_SplitRange> _ranges;
   final int count;
 
+  /// Kompakte Repräsentanten der optimalen Stärkekombinationen. Falls alle
+  /// Spieler unterschiedliche Werte haben, sind die bisherigen Varianten
+  /// bereits eindeutig und wir benötigen keine zusätzliche Liste.
+  final _StrengthCatalog? _strengthCatalog;
+
+  /// Identische effektive Siegquoten gelten als austauschbar.
+  int get strengthCombinationCount => _strengthCatalog?.count ?? count;
+
   const OptimalTeamSplits._(
     this.players,
     this._leftLength,
     this._canonicalMirrors,
     this._ranges,
     this.count,
+    this._strengthCatalog,
   );
+
+  /// Gibt genau eine Spielerzuordnung je unterschiedlicher Wertverteilung
+  /// zurück. Auch bei Millionen austauschbarer Spielerzuordnungen O(n).
+  TeamSplitResult strengthResultAt(int index) {
+    if (index < 0 || index >= strengthCombinationCount) {
+      throw RangeError.range(index, 0, strengthCombinationCount - 1, 'index');
+    }
+    final catalog = _strengthCatalog;
+    if (catalog == null) return resultAt(index);
+    return _resultFromMask(catalog.masks[index]);
+  }
+
+  /// Ermittelt die angezeigte Stärkekombination der aktuellen Teams.
+  /// Tauscht man nur Spieler mit identischen Werten, bleibt der Index gleich.
+  int? strengthIndexForTeamA(Iterable<int> teamAPlayerIds) {
+    final catalog = _strengthCatalog;
+    if (catalog == null) return indexForTeamA(teamAPlayerIds);
+    final ids = teamAPlayerIds.toSet();
+    int mask = 0;
+    for (int i = 0; i < players.length; i++) {
+      if (ids.contains(players[i].player.id)) mask |= 1 << i;
+    }
+    if (_countBits(mask) != ids.length) return null;
+
+    int selectedKey = 0;
+    int mirrorKey = 0;
+    int multiplier = 1;
+    for (int i = 0; i < catalog.groupMasks.length; i++) {
+      final selected = _countBits(mask & catalog.groupMasks[i]);
+      selectedKey += selected * multiplier;
+      mirrorKey += (catalog.groupSizes[i] - selected) * multiplier;
+      multiplier *= catalog.groupSizes[i] + 1;
+    }
+    // Bei gleich grossen Teams ist auch die vertauschte A/B-Orientierung
+    // dieselbe Stärkekombination. Andere Teamgrössen bleiben unverändert.
+    return catalog.indexByKey[selectedKey] ??
+        (_canonicalMirrors ? catalog.indexByKey[mirrorKey] : null);
+  }
 
   TeamSplitResult resultAt(int index) {
     if (count == 0) {
@@ -79,6 +126,10 @@ class OptimalTeamSplits {
     final rightMask = range.rightSubsets[range.firstRight + offset].mask;
     final selectedMask = range.leftMask | (rightMask << _leftLength);
 
+    return _resultFromMask(selectedMask);
+  }
+
+  TeamSplitResult _resultFromMask(int selectedMask) {
     final teamA = <WeightedPlayer>[];
     final teamB = <WeightedPlayer>[];
     for (int i = 0; i < players.length; i++) {
@@ -123,6 +174,24 @@ class OptimalTeamSplits {
     }
     return null;
   }
+}
+
+/// Ein Repräsentant pro effektiver Stärkekombination; keine doppelten
+/// Personenbelegungen für Spieler mit gleichem Wert.
+class _StrengthCatalog {
+  final List<int> masks;
+  final Map<int, int> indexByKey;
+  final List<int> groupMasks;
+  final List<int> groupSizes;
+
+  const _StrengthCatalog({
+    required this.masks,
+    required this.indexByKey,
+    required this.groupMasks,
+    required this.groupSizes,
+  });
+
+  int get count => masks.length;
 }
 
 class _SplitRequest {
@@ -197,7 +266,7 @@ OptimalTeamSplits _calculateOptimalTeamSplits(_SplitRequest request) {
     throw RangeError.range(requestedSize, 0, n, 'teamASize');
   }
   if (n == 0) {
-    return OptimalTeamSplits._(weightedPlayers, 0, false, const [], 0);
+    return OptimalTeamSplits._(weightedPlayers, 0, false, const [], 0, null);
   }
   if (n == 1 || requestedSize == 0 || requestedSize == n) {
     final selectedMask = requestedSize == 0 ? 0 : (1 << n) - 1;
@@ -211,6 +280,7 @@ OptimalTeamSplits _calculateOptimalTeamSplits(_SplitRequest request) {
         ),
       ],
       1,
+      null,
     );
   }
 
@@ -223,10 +293,13 @@ OptimalTeamSplits _calculateOptimalTeamSplits(_SplitRequest request) {
       .toList();
   final total = values.fold<int>(0, (a, b) => a + b);
 
-  // Nur bei der freien Ersteinteilung und exakt gleich großen Teams
-  // werden A/B-Spiegelungen als dieselbe Variante betrachtet.
-  // Bei ungleichen FESTEN Teamgrößen sind A und B unterscheidbar.
-  final canonicalMirrors = requestedSize == null || requestedSize * 2 == n;
+  // A/B-Spiegelungen muessen nur bei GLEICH grossen Teams entfernt
+  // werden: Bei ungerader Spielerzahl ist Team A bei der Ersteinteilung
+  // immer die kleinere Gruppe (z. B. 4 / 5). Die gespiegelte Aufteilung
+  // (5 / 4) wird gar nicht erzeugt. Dadurch bleibt der Teamname stabil,
+  // waehrend alle unterschiedlichen optimalen Aufteilungen erhalten bleiben.
+  // Bei einer spaeteren Optimierung ist die vorgegebene A-Groesse bindend.
+  final canonicalMirrors = (requestedSize ?? (n ~/ 2)) * 2 == n;
   final remaining = canonicalMirrors ? n - 1 : n;
   final leftLength = remaining ~/ 2;
   final rightLength = remaining - leftLength;
@@ -240,9 +313,9 @@ OptimalTeamSplits _calculateOptimalTeamSplits(_SplitRequest request) {
     group.sort((a, b) => a.sum.compareTo(b.sum));
   }
 
-  final sizes = requestedSize == null
-      ? [n ~/ 2, if (n.isOdd) (n + 1) ~/ 2]
-      : [requestedSize];
+  // Ausschliesslich diese Team-A-Groesse betrachten. Fuer ungerade n
+  // entspricht jede A/B-Spiegelung bereits exakt einer dieser Varianten.
+  final sizes = [requestedSize ?? (n ~/ 2)];
   int? bestNumerator;
   int? bestDenominator;
 
@@ -305,12 +378,24 @@ OptimalTeamSplits _calculateOptimalTeamSplits(_SplitRequest request) {
     }
   }
 
+  final strengthCatalog = _buildStrengthCatalog(
+    values: values,
+    teamASize: sizes.single,
+    canonicalMirrors: canonicalMirrors,
+    bestNumerator: bestNumerator!,
+    bestDenominator: bestDenominator!,
+    ranges: ranges,
+    leftLength: leftLength,
+    variantCount: runningCount,
+  );
+
   return OptimalTeamSplits._(
     weightedPlayers,
     leftLength,
     canonicalMirrors,
     ranges,
     runningCount,
+    strengthCatalog,
   );
 }
 
@@ -341,4 +426,176 @@ int _lowerBound(List<_Subset> sorted, int target, int multiplier) {
     }
   }
   return low;
+}
+
+/// Berechnet je optimaler Stärkekombination genau EINE repräsentative
+/// Team-A-Auswahl. Damit müssen die Pfeiltasten niemals alle Varianten aus
+/// Vertauschungen gleich starker Spieler durchlaufen.
+/// Bei ausschließlich verschiedenen Werten ist keine Zusatzliste nötig:
+/// jede optimale Spieleraufteilung ist schon eine Stärkekombination.
+_StrengthCatalog? _buildStrengthCatalog({
+  required List<int> values,
+  required int teamASize,
+  required bool canonicalMirrors,
+  required int bestNumerator,
+  required int bestDenominator,
+  required List<_SplitRange> ranges,
+  required int leftLength,
+  required int variantCount,
+}) {
+  if (variantCount == 0) return null;
+  final n = values.length;
+  final countsByValue = <int, int>{};
+  final maskByValue = <int, int>{};
+  for (int i = 0; i < n; i++) {
+    final value = values[i];
+    countsByValue[value] = (countsByValue[value] ?? 0) + 1;
+    maskByValue[value] = (maskByValue[value] ?? 0) | (1 << i);
+  }
+  if (countsByValue.length == n) return null;
+
+  final strengths = countsByValue.keys.toList()..sort();
+  final groupSizes = strengths.map((v) => countsByValue[v]!).toList();
+  final groupMasks = strengths.map((v) => maskByValue[v]!).toList();
+  final anchorStrength = canonicalMirrors ? values.last : null;
+  final anchorIndex = canonicalMirrors
+      ? strengths.indexOf(anchorStrength!)
+      : -1;
+  final anchorMask = canonicalMirrors ? (1 << (n - 1)) : 0;
+  final total = values.fold<int>(0, (a, b) => a + b);
+  final denominator = teamASize * (n - teamASize);
+  final best = bestNumerator * denominator ~/ bestDenominator;
+  final expected = teamASize * total;
+
+  final masks = <int>[];
+  final indexByKey = <int, int>{};
+
+  int combinationKey(List<int> chosenCounts) {
+    int key = 0;
+    int multiplier = 1;
+    for (int i = 0; i < groupSizes.length; i++) {
+      key += chosenCounts[i] * multiplier;
+      multiplier *= groupSizes[i] + 1;
+    }
+    return key;
+  }
+
+  // Bei gleich grossen Teams bleiben die gespiegelten Wertverteilungen
+  // eine einzige Kombination, auch wenn der Ankerwert mehrfach vorkommt.
+  bool isCanonicalOrientation(List<int> chosenCounts) {
+    if (!canonicalMirrors || chosenCounts[anchorIndex] == 0) return true;
+    for (int i = 0; i < groupSizes.length; i++) {
+      final difference = 2 * chosenCounts[i] - groupSizes[i];
+      if (difference < 0) return true;
+      if (difference > 0) return false;
+    }
+    return true;
+  }
+
+  void addRepresentative(int mask, List<int> chosenCounts) {
+    final key = combinationKey(chosenCounts);
+    if (indexByKey.containsKey(key)) return;
+    indexByKey[key] = masks.length;
+    masks.add(mask);
+  }
+
+  // Anstatt Millionen Personenbelegungen zu speichern, werden zunächst
+  // ausschließlich die Anzahlen je tatsächlich verschiedenem Wert gewählt.
+  int combinationUpperBound = 1;
+  for (final size in groupSizes) {
+    combinationUpperBound *= size + 1;
+    if (combinationUpperBound > 1000000) break;
+  }
+  if (combinationUpperBound <= 1000000) {
+    final groupCount = groupSizes.length;
+    final remainingPlaces = List<int>.filled(groupCount + 1, 0);
+    for (int i = groupCount - 1; i >= 0; i--) {
+      remainingPlaces[i] = remainingPlaces[i + 1] + groupSizes[i];
+    }
+    final chosenCounts = List<int>.filled(groupCount, 0);
+
+    int canonicalMask() {
+      int selectedMask = 0;
+      for (int i = 0; i < groupCount; i++) {
+        int available = groupMasks[i] & ~anchorMask;
+        int left = chosenCounts[i];
+        while (left > 0 && available != 0) {
+          final lowestBit = available & -available;
+          selectedMask |= lowestBit;
+          available ^= lowestBit;
+          left--;
+        }
+        assert(left == 0);
+      }
+      return selectedMask;
+    }
+
+    void search(int i, int seatsLeft, int sum) {
+      if (i == groupCount) {
+        if (seatsLeft == 0 &&
+            (n * sum - expected).abs() == best &&
+            isCanonicalOrientation(chosenCounts)) {
+          addRepresentative(canonicalMask(), chosenCounts);
+        }
+        return;
+      }
+      final available = groupSizes[i] - (i == anchorIndex ? 1 : 0);
+      final minChosen = seatsLeft > remainingPlaces[i + 1]
+          ? seatsLeft - remainingPlaces[i + 1]
+          : 0;
+      final maxChosen = seatsLeft < available ? seatsLeft : available;
+      for (int k = minChosen; k <= maxChosen; k++) {
+        chosenCounts[i] = k;
+        search(i + 1, seatsLeft - k, sum + k * strengths[i]);
+      }
+      chosenCounts[i] = 0;
+    }
+
+    search(0, teamASize, 0);
+  } else {
+    // Für fast ausschließlich verschiedene Werte kann die vorhandene
+    // Meet-in-the-Middle-Liste schneller sein als alle Wertemengen zu prüfen.
+    // Nur die erste kanonische Auswahl jedes gleichen Wertes wird übernommen.
+    final repeatedMasks = groupMasks
+        .map((mask) => mask & ~anchorMask)
+        .where((mask) => (mask & (mask - 1)) != 0)
+        .toList();
+    final chosenCounts = List<int>.filled(groupSizes.length, 0);
+    for (final range in ranges) {
+      for (int j = range.firstRight; j < range.lastRight; j++) {
+        final selectedMask =
+            range.leftMask | (range.rightSubsets[j].mask << leftLength);
+        bool representative = true;
+        for (final groupMask in repeatedMasks) {
+          final selected = selectedMask & groupMask;
+          if (selected != (groupMask & ((1 << selected.bitLength) - 1))) {
+            representative = false;
+            break;
+          }
+        }
+        if (!representative) continue;
+        for (int i = 0; i < groupMasks.length; i++) {
+          chosenCounts[i] = _countBits(selectedMask & groupMasks[i]);
+        }
+        if (!isCanonicalOrientation(chosenCounts)) continue;
+        addRepresentative(selectedMask, chosenCounts);
+      }
+    }
+  }
+
+  return _StrengthCatalog(
+    masks: masks,
+    indexByKey: indexByKey,
+    groupMasks: groupMasks,
+    groupSizes: groupSizes,
+  );
+}
+
+int _countBits(int mask) {
+  int count = 0;
+  while (mask != 0) {
+    mask &= mask - 1;
+    count++;
+  }
+  return count;
 }

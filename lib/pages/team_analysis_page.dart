@@ -1,4 +1,4 @@
-// VERSION 2026-11-09 (KOMPAKTE VARIANTEN): "x optimale Varianten", Navigation und Zauberstab in einer Zeile.
+// VERSION 2026-11-09 (STAERKE-NAVIGATION): Pfeile zeigen nur unterschiedliche Staerkekombinationen.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -123,7 +123,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
 
       setState(() {
         _alternatives = alternatives;
-        _alternativeIndex = alternatives.indexForTeamA(
+        _alternativeIndex = alternatives.strengthIndexForTeamA(
           _teamA.map((entry) => entry.player.id),
         );
         _calculatingAlternatives = false;
@@ -166,7 +166,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
       );
       if (!mounted || version != _calculationVersion ||
           alternatives.count == 0) return;
-      final result = alternatives.resultAt(0);
+      final result = alternatives.strengthResultAt(0);
       await _databaseService.saveTeamSplit(result);
       if (!mounted || version != _calculationVersion) return;
       final newTeamA = List<WeightedPlayer>.from(result.teamA);
@@ -194,7 +194,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     }
   }
 
-  /// Wechselt sofort zur nächsten/vorherigen optimalen Aufteilung und
+  /// Wechselt sofort zur nächsten/vorherigen unterschiedlichen Stärkekombination und
   /// speichert sämtliche Teamzuordnungen in einer Datenbanktransaktion.
   Future<void> _showAlternative(int direction) async {
     final alternatives = _alternatives;
@@ -202,27 +202,41 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
         _calculatingAlternatives ||
         _updatingPlayerIds.isNotEmpty ||
         alternatives == null ||
-        alternatives.count == 0) {
+        alternatives.strengthCombinationCount == 0) {
       return;
     }
 
     final current = _alternativeIndex;
+    final strengthCount = alternatives.strengthCombinationCount;
     final nextIndex = current == null
-        ? (direction > 0 ? 0 : alternatives.count - 1)
-        : (current + direction + alternatives.count) % alternatives.count;
+        ? (direction > 0 ? 0 : strengthCount - 1)
+        : (current + direction + strengthCount) % strengthCount;
     if (current == nextIndex) return;
 
     final previousTeamA = _teamA;
     final previousTeamB = _teamB;
-    final canonical = alternatives.resultAt(nextIndex);
-    // Wenn der feste Referenzspieler derzeit in Team A ist, bleibt die
-    // Orientierung A/B beim Durchblättern erhalten.
-    final isReversed = _teamA.any(
-      (entry) => entry.player.id == alternatives.players.last.player.id,
-    );
-    final result = isReversed
+    final teamASize = previousTeamA.length;
+    final canonical = alternatives.strengthResultAt(nextIndex);
+
+    // Bei ungleichen Teamgroessen ist die bisherige Groesse von Team A
+    // verbindlich: Niemals A und B nur aufgrund des Referenzspielers tauschen.
+    // Bei gleich grossen Teams bleibt wie bisher der Referenzspieler auf
+    // seiner bisherigen A/B-Seite, sodass reine Spiegelungen nicht wechseln.
+    final keepReferenceSide = canonical.teamA.length == canonical.teamB.length &&
+        previousTeamA.any(
+          (entry) => entry.player.id == alternatives.players.last.player.id,
+        );
+    final swapTeams = canonical.teamA.length != teamASize || keepReferenceSide;
+    final result = swapTeams
         ? TeamSplitResult(teamA: canonical.teamB, teamB: canonical.teamA)
         : canonical;
+    if (result.teamA.length != teamASize ||
+        result.teamB.length != previousTeamB.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Die Teamgrößen konnten nicht beibehalten werden.')),
+      );
+      return;
+    }
     final nextTeamA = List<WeightedPlayer>.from(result.teamA);
     final nextTeamB = List<WeightedPlayer>.from(result.teamB);
     _sortWeightedPlayers(nextTeamA);
@@ -436,7 +450,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
       final destination = targetTeam == 0 ? _teamA : _teamB;
       destination.add(weightedPlayer);
       _sortWeightedPlayers(destination);
-      _alternativeIndex = _alternatives?.indexForTeamA(
+      _alternativeIndex = _alternatives?.strengthIndexForTeamA(
         _teamA.map((entry) => entry.player.id),
       );
     });
@@ -457,7 +471,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
         final original = originalTeam == 0 ? _teamA : _teamB;
         original.add(weightedPlayer);
         _sortWeightedPlayers(original);
-        _alternativeIndex = _alternatives?.indexForTeamA(
+        _alternativeIndex = _alternatives?.strengthIndexForTeamA(
           _teamA.map((entry) => entry.player.id),
         );
       });
@@ -1004,7 +1018,7 @@ class _SummaryCard extends StatelessWidget {
                   child: Text(
                     alternativeIndex == null
                         ? 'Manuelle Aufteilung'
-                        : 'Variante ${alternativeIndex! + 1} von ${alternatives?.count ?? 0}',
+                        : 'Stärkekomb. ${alternativeIndex! + 1} / ${alternatives?.strengthCombinationCount ?? 0}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -1017,12 +1031,12 @@ class _SummaryCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   child: IconButton(
-                    tooltip: 'Vorherige gleich gute Aufteilung',
+                    tooltip: 'Vorherige unterschiedliche Stärkekombination',
                     padding: EdgeInsets.zero,
                     iconSize: 23,
                     onPressed: !switching && !calculating && !reoptimizing &&
-                            ((alternatives?.count ?? 0) > 1 ||
-                            (alternativeIndex == null && (alternatives?.count ?? 0) > 0))
+                            ((alternatives?.strengthCombinationCount ?? 0) > 1 ||
+                            (alternativeIndex == null && (alternatives?.strengthCombinationCount ?? 0) > 0))
                         ? onPrevious : null,
                     icon: const Icon(Icons.chevron_left),
                   ),
@@ -1031,12 +1045,12 @@ class _SummaryCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   child: IconButton(
-                    tooltip: 'Nächste gleich gute Aufteilung',
+                    tooltip: 'Nächste unterschiedliche Stärkekombination',
                     padding: EdgeInsets.zero,
                     iconSize: 23,
                     onPressed: !switching && !calculating && !reoptimizing &&
-                            ((alternatives?.count ?? 0) > 1 ||
-                            (alternativeIndex == null && (alternatives?.count ?? 0) > 0))
+                            ((alternatives?.strengthCombinationCount ?? 0) > 1 ||
+                            (alternativeIndex == null && (alternatives?.strengthCombinationCount ?? 0) > 0))
                         ? onNext : null,
                     icon: const Icon(Icons.chevron_right),
                   ),
@@ -1076,7 +1090,33 @@ class _SummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Der Zauberstab optimiert die Teamaufteilung bei gleichbleibenden Teamgrößen: ${result.teamA.length} / ${result.teamB.length}',
+              calculating
+                  ? 'Stärkekombinationen werden berechnet …'
+                  : '${alternatives?.strengthCombinationCount ?? 0} unterschiedliche Stärkekombinationen',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Spieler mit gleicher gewichteter Siegquote gelten als austauschbar.',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Teamgrößen bleiben erhalten: ${result.teamA.length} / ${result.teamB.length}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Zauberstab: Berechnet die bestmögliche Aufteilung der aktuellen Spieler neu.',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontSize: 11,
                 color: isDark ? AppTheme.grey400 : AppTheme.grey600,
