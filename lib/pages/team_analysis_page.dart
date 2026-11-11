@@ -1,5 +1,7 @@
-// VERSION 2026-11-09 (STAERKE-NAVIGATION): Pfeile zeigen nur unterschiedliche Staerkekombinationen.
+// VERSION 2026-11-12 (FIX): Korrekte Übergabe der Legendenparameter; einklappbare Variantenlegende.
+// VERSION 2026-11-11 (SHUFFLE): Gleich starke Spieler innerhalb der aktuellen Staerkekombination mischen.
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:teamer/app_theme/app_theme.dart';
@@ -17,6 +19,7 @@ class TeamAnalysisPage extends StatefulWidget {
 
 class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   final DatabaseService _databaseService = DatabaseService.instance;
+  final Random _random = Random();
 
   bool _loading = true;
   final Set<int> _updatingPlayerIds = <int>{};
@@ -29,8 +32,10 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   int? _alternativeIndex;
   bool _calculatingAlternatives = false;
   bool _applyingAlternative = false;
+  bool _shuffling = false;
   bool _variantsExpanded = false;
   bool _statsLegendExpanded = false;
+  bool _variantsLegendExpanded = false;
   bool _reoptimizing = false;
   bool _readRouteArguments = false;
   int _calculationVersion = 0;
@@ -87,13 +92,12 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
 
   /// Ermittelt alle gleichwertig besten Aufteilungen für die aktuell
   /// zugeteilten Spieler. Ältere Berechnungen werden nicht mehr übernommen.
-  Future<void> _refreshAlternatives({
-    OptimalTeamSplits? precomputed,
-  }) async {
+  Future<void> _refreshAlternatives({OptimalTeamSplits? precomputed}) async {
     final version = ++_calculationVersion;
-    final players = [..._teamA, ..._teamB]
-        .map((entry) => entry.player)
-        .toList();
+    final players = [
+      ..._teamA,
+      ..._teamB,
+    ].map((entry) => entry.player).toList();
     final playerIds = players.map((p) => p.id).toSet();
     final minGames = appSettingsController.value.minGamesForFullWeight;
 
@@ -103,11 +107,13 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     });
 
     try {
-      final canReuse = precomputed != null &&
+      final canReuse =
+          precomputed != null &&
           precomputed.players.length == players.length &&
           precomputed.resultAt(0).teamA.length == _teamA.length &&
           precomputed.players.every(
-            (entry) => playerIds.contains(entry.player.id) &&
+            (entry) =>
+                playerIds.contains(entry.player.id) &&
                 entry.usesFallbackWeight ==
                     (entry.player.attendance < minGames),
           );
@@ -135,7 +141,11 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
         _calculatingAlternatives = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Optimale Aufteilungen konnten nicht berechnet werden: $error')),
+        SnackBar(
+          content: Text(
+            'Optimale Aufteilungen konnten nicht berechnet werden: $error',
+          ),
+        ),
       );
     }
   }
@@ -143,13 +153,17 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   /// Berechnet die beste neue Zuordnung mit der AKTUELLEN Anzahl
   /// Spieler pro Team. Auch ungleiche Teamgrößen bleiben erhalten.
   Future<void> _reoptimizeTeams() async {
-    if (_reoptimizing || _applyingAlternative || _calculatingAlternatives ||
-        _updatingPlayerIds.isNotEmpty) return;
+    if (_reoptimizing ||
+        _applyingAlternative ||
+        _calculatingAlternatives ||
+        _updatingPlayerIds.isNotEmpty)
+      return;
 
     final teamASize = _teamA.length;
-    final players = [..._teamA, ..._teamB]
-        .map((entry) => entry.player)
-        .toList();
+    final players = [
+      ..._teamA,
+      ..._teamB,
+    ].map((entry) => entry.player).toList();
     if (players.isEmpty) return;
     final version = ++_calculationVersion;
     setState(() {
@@ -164,8 +178,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
             appSettingsController.value.minGamesForFullWeight,
         teamASize: teamASize,
       );
-      if (!mounted || version != _calculationVersion ||
-          alternatives.count == 0) return;
+      if (!mounted || version != _calculationVersion || alternatives.count == 0)
+        return;
       final result = alternatives.strengthResultAt(0);
       await _databaseService.saveTeamSplit(result);
       if (!mounted || version != _calculationVersion) return;
@@ -198,7 +212,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   /// speichert sämtliche Teamzuordnungen in einer Datenbanktransaktion.
   Future<void> _showAlternative(int direction) async {
     final alternatives = _alternatives;
-    if (_reoptimizing || _applyingAlternative ||
+    if (_reoptimizing ||
+        _applyingAlternative ||
         _calculatingAlternatives ||
         _updatingPlayerIds.isNotEmpty ||
         alternatives == null ||
@@ -222,7 +237,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     // verbindlich: Niemals A und B nur aufgrund des Referenzspielers tauschen.
     // Bei gleich grossen Teams bleibt wie bisher der Referenzspieler auf
     // seiner bisherigen A/B-Seite, sodass reine Spiegelungen nicht wechseln.
-    final keepReferenceSide = canonical.teamA.length == canonical.teamB.length &&
+    final keepReferenceSide =
+        canonical.teamA.length == canonical.teamB.length &&
         previousTeamA.any(
           (entry) => entry.player.id == alternatives.players.last.player.id,
         );
@@ -233,7 +249,9 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     if (result.teamA.length != teamASize ||
         result.teamB.length != previousTeamB.length) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Die Teamgrößen konnten nicht beibehalten werden.')),
+        const SnackBar(
+          content: Text('Die Teamgrößen konnten nicht beibehalten werden.'),
+        ),
       );
       return;
     }
@@ -259,11 +277,149 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
         _alternativeIndex = current;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Variante konnte nicht gespeichert werden: $error')),
+        SnackBar(
+          content: Text('Variante konnte nicht gespeichert werden: $error'),
+        ),
       );
     } finally {
       if (mounted) {
         setState(() => _applyingAlternative = false);
+      }
+    }
+  }
+
+  // Dieselbe Genauigkeit wie die Staerkekombinationen im Teamgenerator.
+  // So gelten auch mathematisch gleiche Werte trotz Rundungsfehlern als gleich.
+  int _strengthKey(WeightedPlayer entry) =>
+      (entry.effectiveWinRate * 1000000000000).round();
+
+  /// Shuffle ist nur moeglich, wenn sich mindestens zwei Spieler mit
+  /// gleicher effektiver Staerke in unterschiedlichen Teams befinden.
+  /// Ein reiner A/B-Namenstausch bei genau zwei Spielern zaehlt nicht.
+  bool get _canShuffleTeams {
+    if (_teamA.isEmpty ||
+        _teamB.isEmpty ||
+        (_teamA.length == 1 && _teamB.length == 1)) {
+      return false;
+    }
+    final strengthsA = _teamA.map(_strengthKey).toSet();
+    return _teamB.any((entry) => strengthsA.contains(_strengthKey(entry)));
+  }
+
+  /// Mischt die konkreten Spielerzuordnungen innerhalb der aktuellen
+  /// Staerkekombination. Die Anzahl jeder Staerke pro Team bleibt exakt gleich.
+  /// Es wird weder die Staerkekombination gewechselt noch neu optimiert.
+  Future<void> _shuffleTeams() async {
+    if (_reoptimizing ||
+        _applyingAlternative ||
+        _calculatingAlternatives ||
+        _updatingPlayerIds.isNotEmpty ||
+        !_canShuffleTeams) {
+      return;
+    }
+
+    final previousTeamA = _teamA;
+    final previousTeamB = _teamB;
+    final previousAIds = previousTeamA.map((e) => e.player.id).toSet();
+    final previousBIds = previousTeamB.map((e) => e.player.id).toSet();
+
+    final playersByStrength = <int, List<WeightedPlayer>>{};
+    final sizeAByStrength = <int, int>{};
+    for (final entry in previousTeamA) {
+      final key = _strengthKey(entry);
+      playersByStrength.putIfAbsent(key, () => []).add(entry);
+      sizeAByStrength[key] = (sizeAByStrength[key] ?? 0) + 1;
+    }
+    for (final entry in previousTeamB) {
+      playersByStrength.putIfAbsent(_strengthKey(entry), () => []).add(entry);
+    }
+
+    TeamSplitResult? shuffled;
+    // Zufallsbelegung aller Staerkegruppen: Weder die alte Aufteilung noch
+    // eine reine A/B-Spiegelung darf als neue Variante erscheinen.
+    for (var attempt = 0; attempt < 32 && shuffled == null; attempt++) {
+      final nextA = <WeightedPlayer>[];
+      final nextB = <WeightedPlayer>[];
+      for (final group in playersByStrength.entries) {
+        final mixed = List<WeightedPlayer>.from(group.value)..shuffle(_random);
+        final countA = sizeAByStrength[group.key] ?? 0;
+        nextA.addAll(mixed.take(countA));
+        nextB.addAll(mixed.skip(countA));
+      }
+
+      final newAIds = nextA.map((entry) => entry.player.id).toSet();
+      final unchanged = previousAIds.containsAll(newAIds);
+      final mirrored =
+          previousTeamA.length == previousTeamB.length &&
+          previousBIds.containsAll(newAIds);
+      if (!unchanged && !mirrored) {
+        shuffled = TeamSplitResult(teamA: nextA, teamB: nextB);
+      }
+    }
+
+    // Garantierter Fallback bei zufaellig wiederholtem Ziehen der alten
+    // Belegung: ein Paar identisch starker Spieler wird gezielt getauscht.
+    if (shuffled == null) {
+      final swappable = playersByStrength.keys
+          .where(
+            (key) =>
+                previousTeamA.any((entry) => _strengthKey(entry) == key) &&
+                previousTeamB.any((entry) => _strengthKey(entry) == key),
+          )
+          .toList();
+      final key = swappable[_random.nextInt(swappable.length)];
+      final candidatesA = previousTeamA
+          .where((entry) => _strengthKey(entry) == key)
+          .toList();
+      final candidatesB = previousTeamB
+          .where((entry) => _strengthKey(entry) == key)
+          .toList();
+      final fromA = candidatesA[_random.nextInt(candidatesA.length)];
+      final fromB = candidatesB[_random.nextInt(candidatesB.length)];
+      shuffled = TeamSplitResult(
+        teamA: [
+          ...previousTeamA.where((entry) => entry.player.id != fromA.player.id),
+          fromB,
+        ],
+        teamB: [
+          ...previousTeamB.where((entry) => entry.player.id != fromB.player.id),
+          fromA,
+        ],
+      );
+    }
+
+    final nextTeamA = List<WeightedPlayer>.from(shuffled.teamA);
+    final nextTeamB = List<WeightedPlayer>.from(shuffled.teamB);
+    _sortWeightedPlayers(nextTeamA);
+    _sortWeightedPlayers(nextTeamB);
+
+    setState(() {
+      _applyingAlternative = true;
+      _shuffling = true;
+      _teamA = nextTeamA;
+      _teamB = nextTeamB;
+      // _alternativeIndex bleibt erhalten: dieselbe Staerkekombination.
+    });
+
+    try {
+      await _databaseService.saveTeamSplit(shuffled);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _teamA = previousTeamA;
+        _teamB = previousTeamB;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Shuffle konnte nicht gespeichert werden: $error'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _applyingAlternative = false;
+          _shuffling = false;
+        });
       }
     }
   }
@@ -291,15 +447,12 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
 
   void _sortWeightedPlayers(List<WeightedPlayer> players) {
     players.sort(
-      (a, b) => a.player.name.toLowerCase().compareTo(
-        b.player.name.toLowerCase(),
-      ),
+      (a, b) =>
+          a.player.name.toLowerCase().compareTo(b.player.name.toLowerCase()),
     );
   }
 
-  Future<void> _confirmAndRemovePlayer(
-    WeightedPlayer weightedPlayer,
-  ) async {
+  Future<void> _confirmAndRemovePlayer(WeightedPlayer weightedPlayer) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final player = weightedPlayer.player;
 
@@ -315,10 +468,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const _DeleteDialogTitle(),
-            const Padding(
-              padding: EdgeInsets.only(top: 6.0),
-              child: Divider(),
-            ),
+            const Padding(padding: EdgeInsets.only(top: 6.0), child: Divider()),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 30.0),
               child: Text.rich(
@@ -356,17 +506,17 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
 
   Future<void> _removePlayer(WeightedPlayer weightedPlayer) async {
     final player = weightedPlayer.player;
-    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.contains(player.id)) return;
+    if (_reoptimizing ||
+        _applyingAlternative ||
+        _updatingPlayerIds.contains(player.id))
+      return;
 
     setState(() {
       _updatingPlayerIds.add(player.id);
     });
 
     try {
-      await _databaseService.updatePlayerAssignment(
-        player.id,
-        status: 0,
-      );
+      await _databaseService.updatePlayerAssignment(player.id, status: 0);
 
       if (!mounted) return;
       setState(() {
@@ -389,7 +539,10 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   // Wird sowohl beim Hinzufügen als auch beim direkten Teamwechsel verwendet.
   // Die Zuordnung wird gespeichert und die angezeigten Kennzahlen aktualisiert.
   Future<void> _addPlayerToTeam(Player player, int team) async {
-    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.contains(player.id)) return;
+    if (_reoptimizing ||
+        _applyingAlternative ||
+        _updatingPlayerIds.contains(player.id))
+      return;
 
     setState(() {
       _updatingPlayerIds.add(player.id);
@@ -436,7 +589,10 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     int targetTeam,
   ) async {
     final player = weightedPlayer.player;
-    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.contains(player.id)) return;
+    if (_reoptimizing ||
+        _applyingAlternative ||
+        _updatingPlayerIds.contains(player.id))
+      return;
 
     final originalTeam = _teamA.any((entry) => entry.player.id == player.id)
         ? 0
@@ -556,7 +712,9 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                                 children: [
                                   Text(
                                     '$title Spieler hinzufügen',
-                                    style: Theme.of(context).textTheme.bodyLarge,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge,
                                   ),
                                   Text(
                                     '${availablePlayers.length} nicht ausgewählt',
@@ -592,13 +750,14 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                                   height: 1,
                                   indent: 18,
                                   endIndent: 18,
-                                  color: AppTheme.grey400.withValues(alpha: 0.45),
+                                  color: AppTheme.grey400.withValues(
+                                    alpha: 0.45,
+                                  ),
                                 ),
                                 itemBuilder: (context, index) {
                                   final player = availablePlayers[index];
-                                  final isUpdating = _updatingPlayerIds.contains(
-                                    player.id,
-                                  );
+                                  final isUpdating = _updatingPlayerIds
+                                      .contains(player.id);
 
                                   return ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
@@ -665,7 +824,10 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                                     onTap: isUpdating
                                         ? null
                                         : () async {
-                                            await _addPlayerToTeam(player, team);
+                                            await _addPlayerToTeam(
+                                              player,
+                                              team,
+                                            );
                                             if (!sheetContext.mounted) return;
                                             setSheetState(() {});
                                           },
@@ -685,7 +847,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   }
 
   Future<void> _openSettings() async {
-    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.isNotEmpty) return;
+    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.isNotEmpty)
+      return;
     await Navigator.pushNamed(context, '/settings');
     if (!mounted) return;
 
@@ -696,7 +859,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   }
 
   void _openTeamPage() {
-    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.isNotEmpty) return;
+    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.isNotEmpty)
+      return;
     Navigator.pushReplacementNamed(
       context,
       '/team',
@@ -732,7 +896,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                             alternatives: _alternatives,
                             alternativeIndex: _alternativeIndex,
                             calculating: _calculatingAlternatives,
-                            switching: _applyingAlternative ||
+                            switching:
+                                _applyingAlternative ||
                                 _updatingPlayerIds.isNotEmpty,
                             onPrevious: () => _showAlternative(-1),
                             onNext: () => _showAlternative(1),
@@ -740,12 +905,21 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                             onToggleExpanded: () => setState(
                               () => _variantsExpanded = !_variantsExpanded,
                             ),
+                            variantsLegendExpanded: _variantsLegendExpanded,
+                            onToggleVariantsLegend: () => setState(
+                              () => _variantsLegendExpanded =
+                                  !_variantsLegendExpanded,
+                            ),
                             statsLegendExpanded: _statsLegendExpanded,
                             onToggleStatsLegend: () => setState(
-                              () => _statsLegendExpanded = !_statsLegendExpanded,
+                              () =>
+                                  _statsLegendExpanded = !_statsLegendExpanded,
                             ),
                             onReoptimize: _reoptimizeTeams,
                             reoptimizing: _reoptimizing,
+                            onShuffle: _shuffleTeams,
+                            canShuffle: _canShuffleTeams,
+                            shuffling: _shuffling,
                           ),
                           const SizedBox(height: 14),
                           _TeamAnalysisCard(
@@ -817,10 +991,15 @@ class _SummaryCard extends StatelessWidget {
   final VoidCallback onNext;
   final bool expanded;
   final VoidCallback onToggleExpanded;
+  final bool variantsLegendExpanded;
+  final VoidCallback onToggleVariantsLegend;
   final bool statsLegendExpanded;
   final VoidCallback onToggleStatsLegend;
   final VoidCallback onReoptimize;
   final bool reoptimizing;
+  final VoidCallback onShuffle;
+  final bool canShuffle;
+  final bool shuffling;
 
   const _SummaryCard({
     required this.result,
@@ -833,10 +1012,15 @@ class _SummaryCard extends StatelessWidget {
     required this.onNext,
     required this.expanded,
     required this.onToggleExpanded,
+    required this.variantsLegendExpanded,
+    required this.onToggleVariantsLegend,
     required this.statsLegendExpanded,
     required this.onToggleStatsLegend,
     required this.onReoptimize,
     required this.reoptimizing,
+    required this.onShuffle,
+    required this.canShuffle,
+    required this.shuffling,
   });
 
   @override
@@ -844,10 +1028,10 @@ class _SummaryCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final minGames = appSettingsController.value.minGamesForFullWeight;
     final playerCount = result.teamA.length + result.teamB.length;
-    final effectiveTotal = [...result.teamA, ...result.teamB].fold<double>(
-      0.0,
-      (sum, player) => sum + player.effectiveWinRate,
-    );
+    final effectiveTotal = [
+      ...result.teamA,
+      ...result.teamB,
+    ].fold<double>(0.0, (sum, player) => sum + player.effectiveWinRate);
     final totalAverage = playerCount == 0 ? 0.0 : effectiveTotal / playerCount;
 
     return Container(
@@ -888,9 +1072,9 @@ class _SummaryCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 3),
                           child: Text(
                             'Unter $minGames Spielen = Wert 0.5 (default Wert)',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              fontSize: 13,
-                            ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(fontSize: 13),
                           ),
                         ),
                       ),
@@ -911,10 +1095,7 @@ class _SummaryCard extends StatelessWidget {
             child: InkWell(
               onTap: onToggleStatsLegend,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                 child: Column(
                   children: [
                     Row(
@@ -928,7 +1109,9 @@ class _SummaryCard extends StatelessWidget {
                         Expanded(
                           child: _SummaryMetric(
                             label: 'Ø A',
-                            value: (result.averageTeamA * 100).toStringAsFixed(1),
+                            value: (result.averageTeamA * 100).toStringAsFixed(
+                              1,
+                            ),
                           ),
                         ),
                         Expanded(
@@ -940,7 +1123,9 @@ class _SummaryCard extends StatelessWidget {
                         Expanded(
                           child: _SummaryMetric(
                             label: 'Ø B',
-                            value: (result.averageTeamB * 100).toStringAsFixed(1),
+                            value: (result.averageTeamB * 100).toStringAsFixed(
+                              1,
+                            ),
                           ),
                         ),
                         Expanded(
@@ -964,7 +1149,11 @@ class _SummaryCard extends StatelessWidget {
                     ),
                     AnimatedCrossFade(
                       firstChild: const SizedBox(width: double.infinity),
-                      secondChild: _buildMetricLegend(context, isDark, minGames),
+                      secondChild: _buildMetricLegend(
+                        context,
+                        isDark,
+                        minGames,
+                      ),
                       crossFadeState: statsLegendExpanded
                           ? CrossFadeState.showSecond
                           : CrossFadeState.showFirst,
@@ -1000,7 +1189,8 @@ class _SummaryCard extends StatelessWidget {
                     ),
                     if (calculating)
                       const SizedBox(
-                        width: 16, height: 16,
+                        width: 16,
+                        height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     Icon(expanded ? Icons.expand_less : Icons.expand_more),
@@ -1011,8 +1201,9 @@ class _SummaryCard extends StatelessWidget {
           ),
           if (expanded) ...[
             const SizedBox(height: 5),
-            // Variante, Navigation und Neuoptimierung in einer kompakten Zeile.
+            // Navigation und die beiden Aktionen rechts uebereinander.
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
@@ -1034,10 +1225,18 @@ class _SummaryCard extends StatelessWidget {
                     tooltip: 'Vorherige unterschiedliche Stärkekombination',
                     padding: EdgeInsets.zero,
                     iconSize: 23,
-                    onPressed: !switching && !calculating && !reoptimizing &&
-                            ((alternatives?.strengthCombinationCount ?? 0) > 1 ||
-                            (alternativeIndex == null && (alternatives?.strengthCombinationCount ?? 0) > 0))
-                        ? onPrevious : null,
+                    onPressed:
+                        !switching &&
+                            !calculating &&
+                            !reoptimizing &&
+                            ((alternatives?.strengthCombinationCount ?? 0) >
+                                    1 ||
+                                (alternativeIndex == null &&
+                                    (alternatives?.strengthCombinationCount ??
+                                            0) >
+                                        0))
+                        ? onPrevious
+                        : null,
                     icon: const Icon(Icons.chevron_left),
                   ),
                 ),
@@ -1048,10 +1247,18 @@ class _SummaryCard extends StatelessWidget {
                     tooltip: 'Nächste unterschiedliche Stärkekombination',
                     padding: EdgeInsets.zero,
                     iconSize: 23,
-                    onPressed: !switching && !calculating && !reoptimizing &&
-                            ((alternatives?.strengthCombinationCount ?? 0) > 1 ||
-                            (alternativeIndex == null && (alternatives?.strengthCombinationCount ?? 0) > 0))
-                        ? onNext : null,
+                    onPressed:
+                        !switching &&
+                            !calculating &&
+                            !reoptimizing &&
+                            ((alternatives?.strengthCombinationCount ?? 0) >
+                                    1 ||
+                                (alternativeIndex == null &&
+                                    (alternatives?.strengthCombinationCount ??
+                                            0) >
+                                        0))
+                        ? onNext
+                        : null,
                     icon: const Icon(Icons.chevron_right),
                   ),
                 ),
@@ -1071,8 +1278,13 @@ class _SummaryCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      onPressed: switching || calculating || reoptimizing || playerCount == 0
-                          ? null : onReoptimize,
+                      onPressed:
+                          switching ||
+                              calculating ||
+                              reoptimizing ||
+                              playerCount == 0
+                          ? null
+                          : onReoptimize,
                       child: reoptimizing
                           ? const SizedBox(
                               width: 17,
@@ -1086,43 +1298,155 @@ class _SummaryCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 12),
+                Tooltip(
+                  message: canShuffle
+                      ? 'Gleich starke Spieler zufällig neu zuordnen'
+                      : 'Keine anderen gleichwertigen Zuordnungen vorhanden',
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.btnBlue2,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(36, 36),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      onPressed:
+                          switching ||
+                              calculating ||
+                              reoptimizing ||
+                              !canShuffle
+                          ? null
+                          : onShuffle,
+                      child: shuffling
+                          ? const SizedBox(
+                              width: 17,
+                              height: 17,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.shuffle, size: 20),
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              calculating
-                  ? 'Stärkekombinationen werden berechnet …'
-                  : '${alternatives?.strengthCombinationCount ?? 0} unterschiedliche Stärkekombinationen',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Spieler mit gleicher gewichteter Siegquote gelten als austauschbar.',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 11,
-                color: isDark ? AppTheme.grey400 : AppTheme.grey600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Teamgrößen bleiben erhalten: ${result.teamA.length} / ${result.teamB.length}',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 11,
-                color: isDark ? AppTheme.grey400 : AppTheme.grey600,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Zauberstab: Berechnet die bestmögliche Aufteilung der aktuellen Spieler neu.',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 11,
-                color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+            const SizedBox(height: 8),
+            Material(
+              color: isDark ? AppTheme.navigationBarDark : Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onToggleVariantsLegend,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: isDark
+                                      ? AppTheme.grey400
+                                      : AppTheme.grey600,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Anleitung',
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? AppTheme.grey300
+                                            : AppTheme.grey700,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          AnimatedRotation(
+                            turns: variantsLegendExpanded ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeInOut,
+                            child: Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 19,
+                              color: isDark
+                                  ? AppTheme.grey300
+                                  : AppTheme.grey700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      AnimatedCrossFade(
+                        firstChild: const SizedBox(width: double.infinity),
+                        secondChild: _buildVariantsLegend(context, isDark),
+                        crossFadeState: variantsLegendExpanded
+                            ? CrossFadeState.showSecond
+                            : CrossFadeState.showFirst,
+                        duration: const Duration(milliseconds: 180),
+                        sizeCurve: Curves.easeInOut,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVariantsLegend(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 11, 2, 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Divider(
+            height: 1,
+            color: isDark ? AppTheme.grey700 : AppTheme.grey300,
+          ),
+          const SizedBox(height: 10),
+          const _MetricLegendRow(
+            label: 'Stärkekomb.:',
+            labelWidth: 104,
+            description:
+                'Verteilung der gewichteten Siegquoten auf die beiden Teams. '
+                'Spieler mit derselben gewichteten Siegquote gelten als austauschbar. '
+                'Ein reiner Tausch der Teamnamen A und B zählt nicht als neue Kombination.',
+          ),
+          const _MetricLegendRow(
+            label: 'Zauberstab:',
+            labelWidth: 104,
+            description:
+                'Berechnet die bestmögliche Aufteilung der aktuellen Spieler neu. '
+                'Die bisherigen Teamgrößen bleiben dabei erhalten.',
+          ),
+          const _MetricLegendRow(
+            label: 'Shuffle:',
+            labelWidth: 104,
+            description:
+                'Mischt Spieler mit gleicher gewichteter Siegquote, '
+                'ohne die Stärkekombination zu ändern.',
+          ),
         ],
       ),
     );
@@ -1149,7 +1473,8 @@ class _SummaryCard extends StatelessWidget {
           ),
           const _MetricLegendRow(
             label: 'Diff.:',
-            description: 'Abstand zwischen den Teamdurchschnitten in Prozentpunkten. Je kleiner, desto ausgeglichener.',
+            description:
+                'Abstand zwischen den Teamdurchschnitten in Prozentpunkten. Je kleiner, desto ausgeglichener.',
           ),
           const _MetricLegendRow(
             label: 'Ø B:',
@@ -1157,7 +1482,8 @@ class _SummaryCard extends StatelessWidget {
           ),
           const _MetricLegendRow(
             label: 'Ø Ges.:',
-            description: 'Durchschnitt aller zugeteilten Spieler, unabhängig vom Team.',
+            description:
+                'Durchschnitt aller zugeteilten Spieler, unabhängig vom Team.',
           ),
           const SizedBox(height: 8),
           Padding(
@@ -1258,9 +1584,9 @@ class _TeamAnalysisCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
               child: Text(
                 'Keine Spieler im Team',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.grey600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
               ),
             )
           else
@@ -1290,7 +1616,9 @@ class _TeamAnalysisCard extends StatelessWidget {
                                 child: SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                               )
                             : Row(
@@ -1304,10 +1632,13 @@ class _TeamAnalysisCard extends StatelessWidget {
                                       style: TextButton.styleFrom(
                                         backgroundColor: AppTheme.deleteRed,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                       ),
-                                      onPressed: () => onRemovePlayer(weightedPlayer),
+                                      onPressed: () =>
+                                          onRemovePlayer(weightedPlayer),
                                       icon: const Icon(
                                         Icons.delete,
                                         color: Colors.white,
@@ -1327,10 +1658,13 @@ class _TeamAnalysisCard extends StatelessWidget {
                                       style: TextButton.styleFrom(
                                         backgroundColor: AppTheme.primaryBlue,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                       ),
-                                      onPressed: () => onSwitchPlayer(weightedPlayer),
+                                      onPressed: () =>
+                                          onSwitchPlayer(weightedPlayer),
                                       icon: const Icon(
                                         Icons.swap_horiz,
                                         color: Colors.white,
@@ -1438,8 +1772,13 @@ class _SummaryMetric extends StatelessWidget {
 class _MetricLegendRow extends StatelessWidget {
   final String label;
   final String description;
+  final double labelWidth;
 
-  const _MetricLegendRow({required this.label, required this.description});
+  const _MetricLegendRow({
+    required this.label,
+    required this.description,
+    this.labelWidth = 51,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1450,7 +1789,7 @@ class _MetricLegendRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 51,
+            width: labelWidth,
             child: Text(
               label,
               style: TextStyle(
@@ -1538,10 +1877,7 @@ class _DeleteDialogActions extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onDelete;
 
-  const _DeleteDialogActions({
-    required this.onCancel,
-    required this.onDelete,
-  });
+  const _DeleteDialogActions({required this.onCancel, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -1570,9 +1906,7 @@ class _DeleteDialogActions extends StatelessWidget {
           height: 40,
           width: 125,
           child: TextButton(
-            style: TextButton.styleFrom(
-              backgroundColor: AppTheme.deleteRed,
-            ),
+            style: TextButton.styleFrom(backgroundColor: AppTheme.deleteRed),
             onPressed: onDelete,
             child: Text(
               'Löschen',
@@ -1595,10 +1929,7 @@ extension _TeamAnalysisDatabaseActions on DatabaseService {
 
     await db.update(
       'player',
-      {
-        'status': status,
-        if (team != null) 'team': team,
-      },
+      {'status': status, if (team != null) 'team': team},
       where: 'id = ?',
       whereArgs: [playerId],
     );

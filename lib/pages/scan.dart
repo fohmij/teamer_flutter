@@ -1,8 +1,11 @@
+// NEUE VERSION: WhatsApp-Ablauf mit Galerie-Raster unter dem „danach“-Trenner; ohne Abbrechen-Button.
 import 'dart:io';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:photo_manager/photo_manager.dart';
+import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/database/database_services.dart';
@@ -31,9 +34,9 @@ class _WhatsAppPollScanDrawer extends StatefulWidget {
       _WhatsAppPollScanDrawerState();
 }
 
-class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
+class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer>
+    with WidgetsBindingObserver {
   final DatabaseService _databaseService = DatabaseService.instance;
-  final ImagePicker _imagePicker = ImagePicker();
 
   bool _processing = false;
   bool _applying = false;
@@ -43,6 +46,158 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
   String? _rawText;
   XFile? _pickedImage;
   List<_ScanSuggestion> _suggestions = [];
+
+  // Galerie nur in kleinen Seiten laden, damit das Sheet flüssig bleibt.
+  static const int _galleryPageSize = 80;
+  final List<AssetEntity> _galleryImages = [];
+  AssetPathEntity? _galleryAlbum;
+  int _galleryPage = 0;
+  bool _galleryLoading = true;
+  bool _galleryLoadingMore = false;
+  bool _galleryHasMore = true;
+  bool _galleryPermissionGranted = false;
+  bool _galleryLimitedAccess = false;
+  String? _galleryError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadGallery();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Nach einem WhatsApp-Screenshot sofort die neueste Galerie anzeigen.
+    if (state == AppLifecycleState.resumed &&
+        !_processing &&
+        !_applying &&
+        !_galleryLoading) {
+      _loadGallery(requestPermission: false);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _loadGallery({bool requestPermission = true}) async {
+    if (!mounted) return;
+    setState(() {
+      _galleryLoading = true;
+      _galleryError = null;
+      _galleryImages.clear();
+      _galleryAlbum = null;
+      _galleryPage = 0;
+      _galleryHasMore = true;
+      _galleryPermissionGranted = false;
+      _galleryLimitedAccess = false;
+    });
+
+    const requestOption = PermissionRequestOption(
+      androidPermission: AndroidPermission(
+        type: RequestType.image,
+        mediaLocation: false,
+      ),
+    );
+    try {
+      final permission = requestPermission
+          ? await PhotoManager.requestPermissionExtend(
+              requestOption: requestOption,
+            )
+          : await PhotoManager.getPermissionState(requestOption: requestOption);
+      if (!mounted) return;
+      if (!permission.hasAccess) {
+        setState(() {
+          _galleryLoading = false;
+          _galleryError =
+              'Für die Vorschau braucht Teamer Zugriff auf deine Fotos.';
+        });
+        return;
+      }
+
+      final albums = await PhotoManager.getAssetPathList(
+        onlyAll: true,
+        type: RequestType.image,
+        filterOption: FilterOptionGroup(
+          orders: [OrderOption(type: OrderOptionType.createDate, asc: false)],
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _galleryPermissionGranted = true;
+        _galleryLimitedAccess = permission.isLimited;
+        _galleryAlbum = albums.isEmpty ? null : albums.first;
+        if (albums.isEmpty) {
+          _galleryLoading = false;
+          _galleryHasMore = false;
+        }
+      });
+      if (albums.isNotEmpty) await _loadMoreGallery();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _galleryLoading = false;
+        _galleryError = 'Galerie konnte nicht geladen werden: $error';
+      });
+    }
+  }
+
+  Future<void> _loadMoreGallery() async {
+    final album = _galleryAlbum;
+    if (album == null || _galleryLoadingMore || !_galleryHasMore) return;
+
+    setState(() => _galleryLoadingMore = true);
+    try {
+      final images = await album.getAssetListPaged(
+        page: _galleryPage,
+        size: _galleryPageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        _galleryImages.addAll(images);
+        _galleryPage++;
+        _galleryHasMore = images.length == _galleryPageSize;
+        _galleryLoading = false;
+        _galleryLoadingMore = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _galleryLoadingMore = false;
+        _galleryLoading = false;
+        _galleryHasMore = false;
+        _galleryError = 'Weitere Bilder konnten nicht geladen werden: $error';
+      });
+    }
+  }
+
+  Future<void> _chooseMoreLimitedPhotos() async {
+    try {
+      await PhotoManager.presentLimited(type: RequestType.image);
+      if (mounted) await _loadGallery(requestPermission: false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(
+        () => _galleryError = 'Auswahl konnte nicht geöffnet werden: $error',
+      );
+    }
+  }
+
+  void _returnToGallery() {
+    if (_processing || _applying) return;
+    setState(() {
+      _scanWasStarted = false;
+      _errorMessage = null;
+      _rawText = null;
+      _pickedImage = null;
+      _suggestions = [];
+    });
+  }
 
   void _toggleAllSuggestions(bool? value) {
     setState(() {
@@ -80,10 +235,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
     }
 
     try {
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
       if (!opened && mounted) {
         setState(() {
@@ -100,7 +252,18 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
     }
   }
 
-  Future<void> _pickAndScanScreenshot() async {
+  // Das ausgewählte Galerie-Bild nutzt dieselbe OCR wie der System-Picker.
+  Future<void> _scanGalleryAsset(AssetEntity asset) {
+    return _scanWithImage(() async {
+      final file = await asset.file;
+      if (file == null) {
+        throw StateError('Bild konnte nicht geladen werden.');
+      }
+      return XFile(file.path);
+    });
+  }
+
+  Future<void> _scanWithImage(Future<XFile?> Function() chooseImage) async {
     if (_processing || _applying) return;
 
     setState(() {
@@ -113,23 +276,14 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
     });
 
     try {
-      final pickedImage = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 100,
-      );
-
+      final pickedImage = await chooseImage();
       if (pickedImage == null) {
-        if (!mounted) return;
-        setState(() {
-          _processing = false;
-        });
+        if (mounted) _returnToGalleryAfterCancel();
         return;
       }
 
       final recognizedText = await _recognizeText(pickedImage.path);
       final extractedNames = _extractNamesFromRecognizedText(recognizedText);
-
-
       final players = await _databaseService.getPlayers();
       final suggestions = _buildSuggestions(
         extractedNames: extractedNames,
@@ -147,9 +301,17 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
       if (!mounted) return;
       setState(() {
         _processing = false;
+        _scanWasStarted = false;
         _errorMessage = 'Screenshot konnte nicht ausgewertet werden: $error';
       });
     }
+  }
+
+  void _returnToGalleryAfterCancel() {
+    setState(() {
+      _processing = false;
+      _scanWasStarted = false;
+    });
   }
 
   Future<RecognizedText> _recognizeText(String imagePath) async {
@@ -407,27 +569,12 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'WhatsApp-Umfrage scannen',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              Text(
-                'WhatsApp öffnen oder Screenshot auswählen',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
-              ),
-              SizedBox(height: 6),
-            ],
-          ),
-        ),
-      ],
+    return Align(
+      alignment: Alignment.center,
+      child: Text(
+        'WhatsApp-Umfrage scannen',
+        style: Theme.of(context).textTheme.bodyLarge,
+      ),
     );
   }
 
@@ -483,92 +630,184 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
 
   Widget _buildInitialState(ScrollController scrollController) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasGroupLink =
-        appSettingsController.value.whatsAppGroupLink.trim().isNotEmpty;
+    final hasGroupLink = appSettingsController.value.whatsAppGroupLink
+        .trim()
+        .isNotEmpty;
 
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.only(top: 28),
-      children: [
-        Icon(MdiIcons.whatsapp, size: 68, color: AppTheme.grey600),
-        const SizedBox(height: 18),
-        Text(
-          'Öffne zuerst deine WhatsApp-Gruppe und erstelle dort den Screenshot der Umfrage.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 18),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton.icon(
-            onPressed: _openWhatsAppGroup,
-            style: TextButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 37, 211, 102),
-            ),
-            icon: Icon(MdiIcons.whatsapp, color: Colors.black),
-            label: Text(
-              'WhatsApp-Gruppe öffnen',
-              style: TextStyle(color: Colors.black),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.axis == Axis.vertical &&
+            notification.metrics.extentAfter < 400 &&
+            !_galleryLoading &&
+            !_galleryLoadingMore &&
+            _galleryHasMore) {
+          // Während des Layouts nicht direkt setState aufrufen.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _loadMoreGallery();
+          });
+        }
+        return false;
+      },
+      child: CustomScrollView(
+        controller: scrollController,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  'Öffne zuerst deine WhatsApp-Gruppe und erstelle dort einen Screenshot der Teilnehmerliste aus der Anwesenheits-Umfrage.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppTheme.grey400,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: _openWhatsAppGroup,
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 37, 211, 102),
+                    ),
+                    icon: Icon(MdiIcons.whatsapp, color: Colors.black),
+                    label: const Text(
+                      'WhatsApp-Gruppe öffnen',
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        hasGroupLink
+                            ? 'Gruppenlink kannst du in den Einstellungen ändern.'
+                            : 'Gruppenlink zuerst in den Einstellungen festlegen.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.grey600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'danach',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.grey600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (_galleryError != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      _galleryError!,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(color: AppTheme.grey600),
+                    ),
+                  ),
+                if (!_galleryPermissionGranted && !_galleryLoading)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OutlinedButton.icon(
+                      onPressed: PhotoManager.openSetting,
+                      icon: const Icon(Icons.settings_outlined),
+                      label: const Text(
+                        'Galeriezugriff in Einstellungen erlauben',
+                      ),
+                    ),
+                  ),
+                if (_galleryPermissionGranted &&
+                    !_galleryLoading &&
+                    _galleryImages.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 22),
+                    child: Text(
+                      'Keine Bilder gefunden.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 16,
-              color: isDark ? AppTheme.grey400 : AppTheme.grey600,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                hasGroupLink
-                    ? 'Gruppenlink kannst du in den Einstellungen ändern.'
-                    : 'Gruppenlink zuerst in den Einstellungen festlegen.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.grey600,
-                  fontSize: 12,
-                ),
+          if (_galleryImages.isNotEmpty)
+            SliverGrid(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final asset = _galleryImages[index];
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _scanGalleryAsset(asset),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: AssetEntityImage(
+                        asset,
+                        isOriginal: false,
+                        thumbnailSize: const ThumbnailSize.square(250),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.broken_image_outlined),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }, childCount: _galleryImages.length),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                childAspectRatio: 1,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                'danach',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.grey600,
-                  fontSize: 12,
-                ),
+          if (_galleryLoading || _galleryLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
               ),
             ),
-            const Expanded(child: Divider()),
-          ],
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _pickAndScanScreenshot,
-            icon: Icon(
-              Icons.upload_file,
-              color: isDark ? Colors.white : AppTheme.grey700,
+          if (_galleryLimitedAccess &&
+              !_galleryLoading &&
+              _galleryImages.isEmpty)
+            SliverToBoxAdapter(
+              child: TextButton(
+                onPressed: _chooseMoreLimitedPhotos,
+                child: const Text('Weitere Fotos freigeben'),
+              ),
             ),
-            label: Text(
-              'Screenshot hochladen',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ),
-        ),
-      ],
+          const SliverToBoxAdapter(child: SizedBox(height: 18)),
+        ],
+      ),
     );
   }
 
@@ -735,7 +974,7 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
           right: 10,
           bottom: 10,
           child: IconButton(
-            onPressed: _processing || _applying ? null : _pickAndScanScreenshot,
+            onPressed: _processing || _applying ? null : _returnToGallery,
             style: TextButton.styleFrom(
               backgroundColor: isDark
                   ? AppTheme.grey700
@@ -745,7 +984,11 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            icon: const Icon(Icons.delete, size: 18, color: Colors.white),
+            icon: const Icon(
+              Icons.photo_library_outlined,
+              size: 18,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -788,94 +1031,33 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer> {
   }
 
   Widget _buildActions() {
-    final hasSelectedSuggestions = _suggestions.any((s) => s.selected);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (!_scanWasStarted && _suggestions.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 20),
-        child: SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
-              foregroundColor: Colors.white,
-              side: BorderSide(
-                color: isDark ? Colors.transparent : AppTheme.grey300,
-                width: 1,
-              ),
-            ),
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Abbrechen',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ),
-        ),
-      );
+    if (_processing || (!_scanWasStarted && _suggestions.isEmpty)) {
+      return const SizedBox.shrink();
     }
+
+    final hasSelectedSuggestions = _suggestions.any((s) => s.selected);
 
     return Padding(
       padding: const EdgeInsets.only(top: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: isDark ? AppTheme.grey700 : Colors.white,
-                foregroundColor: Colors.white,
-                side: BorderSide(
-                  color: isDark ? Colors.transparent : AppTheme.grey300,
-                  width: 1,
-                ),
-              ),
-              onPressed: _applying
-                  ? null
-                  : () => Navigator.of(context).pop(false),
-              child: Text(
-                'Abbrechen',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (_suggestions.isEmpty)
-            Expanded(
-              child: TextButton(
-                onPressed: _processing || _applying
-                    ? null
-                    : _pickAndScanScreenshot,
-                child: _processing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        _scanWasStarted ? 'Neu scannen' : 'Screenshot wählen',
-                        style: Theme.of(context).textTheme.displaySmall,
-                      ),
-              ),
-            )
-          else
-            Expanded(
-              child: TextButton(
-                onPressed: hasSelectedSuggestions && !_applying
+      child: SizedBox(
+        width: double.infinity,
+        child: TextButton(
+          onPressed: _suggestions.isEmpty
+              ? (_applying ? null : _returnToGallery)
+              : (hasSelectedSuggestions && !_applying
                     ? _applySelectedSuggestions
-                    : null,
-                child: _applying
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        'Zustimmen',
-                        style: Theme.of(context).textTheme.displaySmall,
-                      ),
-              ),
-            ),
-        ],
+                    : null),
+          child: _applying
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  _suggestions.isEmpty ? 'Zur Galerie' : 'Zustimmen',
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+        ),
       ),
     );
   }
