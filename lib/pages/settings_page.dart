@@ -1,9 +1,12 @@
+// VERSION 2026-11-12 B (BACKUP-PFEIL DIREKT NEBEN DEM TITEL): Ein-/Ausklappen von „Statistiken sichern“ sichtbar.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/services/app_settings_controller.dart';
 import 'package:teamer/services/app_settings_service.dart';
 import 'package:teamer/services/reminder_notification_service.dart';
+import 'package:teamer/services/stats_backup_service.dart';
+import 'package:teamer/pages/home_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -26,6 +29,13 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _expandedWhatsAppSection;
   int? _expandedReminderId;
 
+  List<StatsBackup> _backups = [];
+  bool _backupsLoading = true;
+  bool _backupsExpanded = false;
+  bool _backupSectionExpanded = false;
+  bool _backupBusy = false;
+  String? _backupsError;
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
       text: appSettingsController.value.blockedWords.join(', '),
     );
     _blockedWordsFocusNode = FocusNode();
+    _loadBackups();
   }
 
   @override
@@ -237,6 +248,355 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _loadBackups() async {
+    if (!mounted) return;
+    setState(() {
+      _backupsLoading = true;
+      _backupsError = null;
+    });
+    try {
+      final backups = await StatsBackupService.instance.listBackups();
+      if (!mounted) return;
+      setState(() {
+        _backups = backups;
+        _backupsLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _backupsLoading = false;
+        _backupsError = 'Backups konnten nicht geladen werden: $error';
+      });
+    }
+  }
+
+  void _showBackupMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _createManualBackup() async {
+    if (_backupBusy) return;
+    setState(() => _backupBusy = true);
+    try {
+      await StatsBackupService.instance.createManualBackup();
+      await _loadBackups();
+      _showBackupMessage('Statistik-Backup wurde gespeichert.');
+    } catch (error) {
+      _showBackupMessage('Backup konnte nicht erstellt werden: $error');
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  String _formatBackupDate(DateTime value) {
+    final date = value.toLocal();
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${two(date.day)}.${two(date.month)}.${date.year} '
+        '${two(date.hour)}:${two(date.minute)}';
+  }
+
+  Future<void> _restoreBackup(StatsBackup backup) async {
+    if (_backupBusy) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Statistiken wiederherstellen?'),
+        content: Text(
+          'Backup vom ${_formatBackupDate(backup.createdAt)}\n'
+          '${backup.playerCount} Spieler · ${backup.gameCount} Spiele\n\n'
+          'Alle aktuell gespeicherten Spieler und Spiele werden durch '
+          'diesen Stand ersetzt. Eine Sicherheitskopie des jetzigen '
+          'Stands wird vorher automatisch angelegt.',
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onSurface,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(
+              'Wiederherstellen',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _backupBusy) return;
+
+    setState(() => _backupBusy = true);
+    try {
+      await StatsBackupService.instance.restoreBackup(backup);
+      if (!mounted) return;
+      _showBackupMessage('Statistiken erfolgreich wiederhergestellt.');
+      // Alle Seiten mit zwischengespeicherten Statistiken neu aufbauen.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+        (route) => false,
+      );
+    } catch (error) {
+      _showBackupMessage('Wiederherstellung fehlgeschlagen: $error');
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  Future<void> _deleteBackup(StatsBackup backup) async {
+    if (_backupBusy) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Backup löschen?'),
+        content: Text(
+          'Soll die Sicherung vom ${_formatBackupDate(backup.createdAt)} '
+          'wirklich dauerhaft gelöscht werden?',
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onSurface,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(backgroundColor: AppTheme.deleteRed),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(
+              'Löschen',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _backupBusy) return;
+
+    setState(() => _backupBusy = true);
+    try {
+      await StatsBackupService.instance.deleteBackup(backup);
+      await _loadBackups();
+      _showBackupMessage('Backup gelöscht.');
+    } catch (error) {
+      _showBackupMessage('Backup konnte nicht gelöscht werden: $error');
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  Widget _buildBackupSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Statistik-Backups'),
+        _SettingsGroup(
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => setState(
+                  () => _backupSectionExpanded = !_backupSectionExpanded,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.backup_outlined,
+                        size: 26,
+                        color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                      ),
+                      const SizedBox(width: 14),
+                      // Der Pfeil steht DIREKT rechts neben „Statistiken sichern“.
+                      // Sichtbare Pfeilfarbe ist unabhängig vom Icon-Theme.
+                      Expanded(
+                        child: 
+                            Text(
+                              'Daten sichern',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                      ),
+                            Icon(
+                              _backupSectionExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              size: 30,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_backupSectionExpanded) ...[
+              const _SettingsDivider(),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: _backupBusy ? null : _createManualBackup,
+                    icon: _backupBusy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.save_outlined, color: Colors.white),
+                    label: const Text(
+                      'Jetzt Backup erstellen',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            const _SettingsDivider(),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => setState(
+                  () => _backupsExpanded = !_backupsExpanded,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 15,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.history, size: 25),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          _backupsLoading
+                              ? 'Backups werden geladen ...'
+                              : 'Gespeicherte Backups (${_backups.length})',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Icon(
+                        _backupsExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_backupsExpanded) ...[
+              const _SettingsDivider(),
+              if (_backupsLoading)
+                const Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_backupsError != null)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(_backupsError!),
+                )
+              else if (_backups.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('Noch keine Backups vorhanden.'),
+                )
+              else
+                for (final backup in _backups) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          backup.kind == StatsBackupKind.automatic
+                              ? Icons.update
+                              : Icons.inventory_2_outlined,
+                          size: 22,
+                          color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _formatBackupDate(backup.createdAt),
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${backup.typeLabel} · '
+                                '${backup.playerCount} Spieler · '
+                                '${backup.gameCount} Spiele',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(fontSize: 12, color: AppTheme.grey600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Backup wiederherstellen',
+                          onPressed: _backupBusy
+                              ? null
+                              : () => _restoreBackup(backup),
+                          icon: const Icon(Icons.restore),
+                        ),
+                        IconButton(
+                          tooltip: 'Backup löschen',
+                          onPressed: _backupBusy
+                              ? null
+                              : () => _deleteBackup(backup),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (backup != _backups.last) const _SettingsDivider(),
+                ],
+            ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: Text(
+                  'Sichert alle Spieler und Spiele. Automatisch einmal pro '
+                  'Kalendermonat beim Öffnen der App (bis zu 12 automatische '
+                  'Backups). Manuelle Backups bleiben erhalten. '
+                  'Die Sicherungen liegen im App-Speicher und werden beim '
+                  'Deinstallieren in der Regel gelöscht.',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontSize: 13,
+                    color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -358,6 +718,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 24),
+                _buildBackupSection(),
                 const SizedBox(height: 24),
                 const _SectionTitle('WhatsApp-Scan'),
                 _SettingsGroup(
