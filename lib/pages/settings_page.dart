@@ -1,4 +1,4 @@
-// VERSION 2026-11-12 B (BACKUP-PFEIL DIREKT NEBEN DEM TITEL): Ein-/Ausklappen von „Statistiken sichern“ sichtbar.
+// VERSION 2026-11-13: Einstellbare Begriffsersetzungen für den WhatsApp-Scan.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
@@ -18,6 +18,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   static const String _groupLinkSection = 'groupLink';
   static const String _blockedWordsSection = 'blockedWords';
+  static const String _scanReplacementsSection = 'scanReplacements';
 
   late final TextEditingController _minGamesController;
   late final FocusNode _minGamesFocusNode;
@@ -140,6 +141,53 @@ class _SettingsPageState extends State<SettingsPage> {
       _whatsAppGroupLinkFocusNode.unfocus();
     } else if (section == _blockedWordsSection) {
       _blockedWordsFocusNode.unfocus();
+    }
+  }
+
+  Future<void> _openScanReplacementEditor({int? index}) async {
+    final replacements = appSettingsController.value.scanReplacements;
+    final previous = index == null ? null : replacements[index];
+    final edited = await showDialog<ScanReplacement>(
+      context: context,
+      builder: (_) => _ScanReplacementDialog(
+        replacement: previous,
+        existingTerms: [
+          for (int i = 0; i < replacements.length; i++)
+            if (i != index) replacements[i].find,
+        ],
+      ),
+    );
+    if (edited == null || !mounted) return;
+
+    final updated = List<ScanReplacement>.from(
+      appSettingsController.value.scanReplacements,
+    );
+    if (index == null) {
+      updated.add(edited);
+    } else {
+      updated[index] = edited;
+    }
+    try {
+      await appSettingsController.setScanReplacements(updated);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Zuordnung konnte nicht gespeichert werden: $error')),
+      );
+    }
+  }
+
+  Future<void> _removeScanReplacement(int index) async {
+    final updated = List<ScanReplacement>.from(
+      appSettingsController.value.scanReplacements,
+    )..removeAt(index);
+    try {
+      await appSettingsController.setScanReplacements(updated);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Zuordnung konnte nicht gelöscht werden: $error')),
+      );
     }
   }
 
@@ -801,6 +849,78 @@ class _SettingsPageState extends State<SettingsPage> {
                         },
                       ),
                     ),
+                    const _SettingsDivider(),
+                    _ExpandableSettingsRow(
+                      icon: Icons.swap_horiz,
+                      title: 'Begriffe ersetzen',
+                      subtitle: 'Erkannte Namen beim WhatsApp-Scan automatisch ersetzen',
+                      expanded:
+                          _expandedWhatsAppSection == _scanReplacementsSection,
+                      onTap: () => _toggleWhatsAppSection(_scanReplacementsSection),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ein erkannter Begriff wird nur bei vollständiger '
+                            'Übereinstimmung ersetzt (Groß-/Kleinschreibung egal).',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontSize: 13,
+                              color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          if (settings.scanReplacements.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Text(
+                                'Noch keine Zuordnungen angelegt',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  fontSize: 13,
+                                  color: AppTheme.grey600,
+                                ),
+                              ),
+                            )
+                          else
+                            for (int i = 0; i < settings.scanReplacements.length; i++)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () => _openScanReplacementEditor(index: i),
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          child: Text(
+                                            '${settings.scanReplacements[i].find}  →  ${settings.scanReplacements[i].replaceWith}',
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 15),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Zuordnung bearbeiten',
+                                      onPressed: () => _openScanReplacementEditor(index: i),
+                                      icon: const Icon(Icons.edit_outlined, size: 20),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Zuordnung löschen',
+                                      onPressed: () => _removeScanReplacement(i),
+                                      icon: const Icon(Icons.delete_outline, size: 20),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          OutlinedButton.icon(
+                            onPressed: () => _openScanReplacementEditor(),
+                            icon: const Icon(Icons.add, size: 20),
+                            label: const Text('Zuordnung hinzufügen'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -853,6 +973,124 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _ScanReplacementDialog extends StatefulWidget {
+  final ScanReplacement? replacement;
+  final List<String> existingTerms;
+
+  const _ScanReplacementDialog({
+    required this.replacement,
+    required this.existingTerms,
+  });
+
+  @override
+  State<_ScanReplacementDialog> createState() => _ScanReplacementDialogState();
+}
+
+class _ScanReplacementDialogState extends State<_ScanReplacementDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _findController;
+  late final TextEditingController _replaceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _findController = TextEditingController(text: widget.replacement?.find ?? '');
+    _replaceController = TextEditingController(
+      text: widget.replacement?.replaceWith ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _findController.dispose();
+    _replaceController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop(
+      ScanReplacement(
+        find: _findController.text.trim(),
+        replaceWith: _replaceController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      title: Text(
+        widget.replacement == null ? 'Begriff ersetzen' : 'Zuordnung bearbeiten',
+        style: Theme.of(context).textTheme.displayLarge,
+      ),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _findController,
+                autofocus: true,
+                textInputAction: TextInputAction.next,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 16),
+                decoration: const InputDecoration(
+                  labelText: 'Erkannter Begriff',
+                  hintText: 'Du',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final term = (value ?? '').trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+                  if (term.isEmpty) return 'Bitte einen Begriff eingeben';
+                  if (widget.existingTerms.any((other) =>
+                      other.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase() == term)) {
+                    return 'Dieser Begriff ist bereits zugeordnet';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _replaceController,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _save(),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 16),
+                decoration: const InputDecoration(
+                  labelText: 'Ersetzen durch',
+                  hintText: 'Vorname Nachname',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => (value ?? '').trim().isEmpty
+                    ? 'Bitte einen Ersatztext eingeben'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          style: TextButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: isDark ? Colors.white : AppTheme.grey800,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Abbrechen'),
+        ),
+        TextButton(
+          onPressed: _save,
+          child: const Text('Speichern', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }

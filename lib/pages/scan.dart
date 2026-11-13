@@ -1,3 +1,4 @@
+// VERSION 2026-11-13: WhatsApp-Scan mit einstellbaren Begriffsersetzungen.
 // NEUE VERSION: WhatsApp-Ablauf mit Galerie-Raster unter dem „danach“-Trenner; ohne Abbrechen-Button.
 import 'dart:io';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -368,8 +369,13 @@ class _WhatsAppPollScanDrawerState extends State<_WhatsAppPollScanDrawer>
 
     cleaned = cleaned.replaceAll(RegExp(r'^[@~]\s*'), '').trim();
 
-    if (cleaned.toLowerCase() == 'du') {
-      cleaned = 'Jan Bleeck';
+    // Benutzerdefinierte Zuordnungen vor der Namensprüfung anwenden.
+    // Nur vollständige Treffer ersetzen, niemals Teile anderer Namen.
+    final normalized = cleaned.toLowerCase();
+    for (final rule in appSettingsController.value.scanReplacements) {
+      if (rule.find.toLowerCase() == normalized) {
+        return rule.replaceWith;
+      }
     }
 
     return cleaned;

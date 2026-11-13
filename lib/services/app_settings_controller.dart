@@ -1,3 +1,4 @@
+// VERSION 2026-11-13: Einstellbare Scan-Begriffsersetzungen.
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:teamer/services/app_settings_service.dart';
@@ -43,6 +44,12 @@ class AppSettingsController extends ValueNotifier<AppSettings> {
 
     await _settingsService.updateBlockedWords(cleanedWords);
     value = value.copyWith(blockedWords: cleanedWords);
+  }
+
+  Future<void> setScanReplacements(List<ScanReplacement> replacements) async {
+    final cleaned = _settingsService.cleanScanReplacements(replacements);
+    await _settingsService.updateScanReplacements(cleaned);
+    value = value.copyWith(scanReplacements: cleaned);
   }
 
   Future<WeeklyReminder> addWeeklyReminder({

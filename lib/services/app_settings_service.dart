@@ -1,3 +1,4 @@
+// VERSION 2026-11-13: Persistente Scan-Begriffsersetzungen.
 import 'dart:convert';
 
 import 'package:sqflite/sqflite.dart';
@@ -71,11 +72,32 @@ class WeeklyReminder {
   }
 }
 
+/// Eine frei definierte Ersetzung für einen vollständig erkannten Scan-Namen.
+class ScanReplacement {
+  final String find;
+  final String replaceWith;
+
+  const ScanReplacement({required this.find, required this.replaceWith});
+
+  Map<String, String> toJson() => {
+    'find': find,
+    'replaceWith': replaceWith,
+  };
+
+  factory ScanReplacement.fromJson(Map<String, dynamic> json) {
+    return ScanReplacement(
+      find: (json['find'] ?? '').toString(),
+      replaceWith: (json['replaceWith'] ?? '').toString(),
+    );
+  }
+}
+
 class AppSettings {
   final String themeMode;
   final int minGamesForFullWeight;
   final String whatsAppGroupLink;
   final List<String> blockedWords;
+  final List<ScanReplacement> scanReplacements;
   final List<WeeklyReminder> weeklyReminders;
 
   const AppSettings({
@@ -83,6 +105,7 @@ class AppSettings {
     required this.minGamesForFullWeight,
     required this.whatsAppGroupLink,
     required this.blockedWords,
+    required this.scanReplacements,
     required this.weeklyReminders,
   });
 
@@ -91,6 +114,7 @@ class AppSettings {
     minGamesForFullWeight: 5,
     whatsAppGroupLink: '',
     blockedWords: ['ich', 'nicht', 'da', 'stimmabgaben'],
+    scanReplacements: [],
     weeklyReminders: [],
   );
 
@@ -99,6 +123,7 @@ class AppSettings {
     int? minGamesForFullWeight,
     String? whatsAppGroupLink,
     List<String>? blockedWords,
+    List<ScanReplacement>? scanReplacements,
     List<WeeklyReminder>? weeklyReminders,
   }) {
     return AppSettings(
@@ -107,6 +132,7 @@ class AppSettings {
           minGamesForFullWeight ?? this.minGamesForFullWeight,
       whatsAppGroupLink: whatsAppGroupLink ?? this.whatsAppGroupLink,
       blockedWords: blockedWords ?? this.blockedWords,
+      scanReplacements: scanReplacements ?? this.scanReplacements,
       weeklyReminders: weeklyReminders ?? this.weeklyReminders,
     );
   }
@@ -143,6 +169,7 @@ class AppSettingsService {
     final whatsAppGroupLink = await _getString('whatsAppGroupLink') ??
         AppSettings.defaults.whatsAppGroupLink;
     final blockedWordsRaw = await _getString('blockedWords');
+    final scanReplacementsRaw = await _getString('scanReplacements');
     final remindersRaw = await _getString('weeklyReminders');
 
     return AppSettings(
@@ -150,6 +177,7 @@ class AppSettingsService {
       minGamesForFullWeight: minGames,
       whatsAppGroupLink: whatsAppGroupLink,
       blockedWords: _decodeBlockedWords(blockedWordsRaw),
+      scanReplacements: _decodeScanReplacements(scanReplacementsRaw),
       weeklyReminders: _decodeWeeklyReminders(remindersRaw),
     );
   }
@@ -169,6 +197,32 @@ class AppSettingsService {
   Future<void> updateBlockedWords(List<String> blockedWords) async {
     final cleanedWords = _cleanBlockedWords(blockedWords);
     await _setString('blockedWords', jsonEncode(cleanedWords));
+  }
+
+  Future<void> updateScanReplacements(List<ScanReplacement> replacements) async {
+    final cleaned = cleanScanReplacements(replacements);
+    await _setString(
+      'scanReplacements',
+      jsonEncode(cleaned.map((item) => item.toJson()).toList()),
+    );
+  }
+
+  /// Verwirft leere und doppelte Suchbegriffe (ohne Groß-/Kleinschreibung).
+  List<ScanReplacement> cleanScanReplacements(
+    Iterable<ScanReplacement> replacements,
+  ) {
+    final cleaned = <ScanReplacement>[];
+    final seen = <String>{};
+
+    for (final entry in replacements) {
+      final find = entry.find.trim().replaceAll(RegExp(r'\s+'), ' ');
+      final replaceWith = entry.replaceWith.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (find.isEmpty || replaceWith.isEmpty) continue;
+      if (!seen.add(find.toLowerCase())) continue;
+      cleaned.add(ScanReplacement(find: find, replaceWith: replaceWith));
+    }
+
+    return cleaned;
   }
 
   Future<void> updateWeeklyReminders(List<WeeklyReminder> reminders) async {
@@ -206,6 +260,30 @@ class AppSettingsService {
       return _cleanBlockedWords(decoded.map((value) => value.toString()));
     } catch (_) {
       return List<String>.from(AppSettings.defaults.blockedWords);
+    }
+  }
+
+  List<ScanReplacement> _decodeScanReplacements(String? rawValue) {
+    if (rawValue == null || rawValue.trim().isEmpty) return const [];
+
+    try {
+      final decoded = jsonDecode(rawValue);
+      if (decoded is! List) return const [];
+
+      final replacements = <ScanReplacement>[];
+      for (final item in decoded) {
+        if (item is! Map) continue;
+        try {
+          replacements.add(
+            ScanReplacement.fromJson(Map<String, dynamic>.from(item)),
+          );
+        } catch (_) {
+          // Einzelne beschädigte Zuordnungen ignorieren.
+        }
+      }
+      return cleanScanReplacements(replacements);
+    } catch (_) {
+      return const [];
     }
   }
 
