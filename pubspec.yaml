@@ -22,6 +22,7 @@ dependencies:
   sqflite: ^2.3.3
   path: ^1.9.0
   path_provider: ^2.1.5
+  file_picker: ^10.3.10 # Export/Import über Android-Dateiauswahl (auch Downloads)
   fluttertoast: ^9.0.0
   image_picker: ^1.2.2
   photo_manager: ^3.12.0

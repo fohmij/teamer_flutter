@@ -1,4 +1,8 @@
+// VERSION 2026-11-13 (BACKUP-TRANSFER): Backups exportieren/importieren inkl. Einstellungen und Eventbild.
 // VERSION 2026-11-13: Einstellbare Begriffsersetzungen für den WhatsApp-Scan.
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
@@ -331,11 +335,74 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await StatsBackupService.instance.createManualBackup();
       await _loadBackups();
-      _showBackupMessage('Statistik-Backup wurde gespeichert.');
+      if (mounted) setState(() => _backupsExpanded = true);
+      _showBackupMessage('Vollständiges Backup erstellt. Bitte über das Export-Symbol extern sichern.');
     } catch (error) {
       _showBackupMessage('Backup konnte nicht erstellt werden: $error');
     } finally {
       if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  /// Schreibt die Daten über den System-Dateidialog in einen frei wählbaren
+  /// Ordner (z. B. Downloads). Der App-interne Pfad wird nicht geteilt.
+  Future<void> _exportBackup(StatsBackup backup) async {
+    if (_backupBusy) return;
+    setState(() => _backupBusy = true);
+    try {
+      final bytes = await StatsBackupService.instance.exportBackupBytes(backup);
+      final saved = await FilePicker.platform.saveFile(
+        dialogTitle: 'Teamer-Backup exportieren',
+        fileName: 'teamer_${backup.fileName}',
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        bytes: bytes,
+      );
+      if (saved != null) {
+        _showBackupMessage('Backup exportiert. Bewahre die Datei außerhalb der App auf.');
+      }
+    } catch (error) {
+      _showBackupMessage('Export fehlgeschlagen: $error');
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  /// Importiert eine beliebig benannte JSON-Sicherung, ohne sofort Daten zu
+  /// überschreiben. Die Wiederherstellung erfordert eine zweite Bestätigung.
+  Future<void> _importBackup() async {
+    if (_backupBusy) return;
+    setState(() => _backupBusy = true);
+    StatsBackup? imported;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        dialogTitle: 'Teamer-Backup auswählen',
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final picked = result.files.single;
+        final bytes = picked.bytes ??
+            (picked.path == null ? null : await File(picked.path!).readAsBytes());
+        if (bytes == null) {
+          throw const FormatException('Die gewählte Datei konnte nicht gelesen werden.');
+        }
+        imported = await StatsBackupService.instance.importBackupBytes(bytes);
+        await _loadBackups();
+        if (mounted) {
+          setState(() => _backupsExpanded = true);
+          _showBackupMessage('Backup-Datei importiert. Du kannst sie jetzt wiederherstellen.');
+        }
+      }
+    } catch (error) {
+      _showBackupMessage('Import fehlgeschlagen: $error');
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+    if (imported != null && mounted) {
+      await _restoreBackup(imported);
     }
   }
 
@@ -352,13 +419,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Statistiken wiederherstellen?'),
+        title: const Text('Backup wiederherstellen?'),
         content: Text(
           'Backup vom ${_formatBackupDate(backup.createdAt)}\n'
           '${backup.playerCount} Spieler · ${backup.gameCount} Spiele\n\n'
-          'Alle aktuell gespeicherten Spieler und Spiele werden durch '
-          'diesen Stand ersetzt. Eine Sicherheitskopie des jetzigen '
-          'Stands wird vorher automatisch angelegt.',
+          '${backup.includesAppData ? 'Spieler, Spiele, Einstellungen, Reminder und Eventdaten werden ersetzt.' : 'Dieses ältere Backup enthält nur Spieler und Spiele. Einstellungen und Eventdaten bleiben bestehen.'}\n\n'
+          'Eine Sicherheitskopie des aktuellen Stands wird vorher angelegt.',
         ),
         actions: [
           TextButton(
@@ -385,7 +451,19 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await StatsBackupService.instance.restoreBackup(backup);
       if (!mounted) return;
-      _showBackupMessage('Statistiken erfolgreich wiederhergestellt.');
+      // Nach Wiederherstellung auch den RAM-Cache und die geplanten Reminder
+      // aktualisieren; ansonsten würde die alte Konfiguration weiterlaufen.
+      await appSettingsController.load();
+      String? reminderWarning;
+      try {
+        await ReminderNotificationService.instance.syncWeeklyReminders(
+          appSettingsController.value.weeklyReminders,
+        );
+      } catch (error) {
+        reminderWarning = ' Die Reminder konnten nicht neu geplant werden: $error';
+      }
+      if (!mounted) return;
+      _showBackupMessage('Backup erfolgreich wiederhergestellt.${reminderWarning ?? ''}');
       // Alle Seiten mit zwischengespeicherten Statistiken neu aufbauen.
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomePage()),
@@ -449,7 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionTitle('Statistik-Backups'),
+        const _SectionTitle('Backups'),
         _SettingsGroup(
           children: [
             Material(
@@ -468,26 +546,20 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: isDark ? AppTheme.grey300 : AppTheme.grey700,
                       ),
                       const SizedBox(width: 14),
-                      // Der Pfeil steht DIREKT rechts neben „Statistiken sichern“.
-                      // Sichtbare Pfeilfarbe ist unabhängig vom Icon-Theme.
                       Expanded(
-                        child: 
-                            Text(
-                              'Daten sichern',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
+                        child: Text(
+                          'Daten sichern',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontSize: 17, fontWeight: FontWeight.w600),
+                        ),
                       ),
-                            Icon(
-                              _backupSectionExpanded
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
-                              size: 30,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+                      Icon(
+                        _backupSectionExpanded
+                            ? Icons.expand_less
+                            : Icons.expand_more,
+                        size: 30,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ],
                   ),
                 ),
@@ -515,6 +587,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Jetzt Backup erstellen',
                       style: TextStyle(color: Colors.white),
                     ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _backupBusy ? null : _importBackup,
+                    icon: const Icon(Icons.file_open_outlined),
+                    label: const Text('Backup-Datei importieren'),
                   ),
                 ),
               ),
@@ -597,12 +680,20 @@ class _SettingsPageState extends State<SettingsPage> {
                               Text(
                                 '${backup.typeLabel} · '
                                 '${backup.playerCount} Spieler · '
-                                '${backup.gameCount} Spiele',
+                                '${backup.gameCount} Spiele · '
+                                '${backup.includesAppData ? 'Vollständig' : 'Nur Statistiken'}',
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(fontSize: 12, color: AppTheme.grey600),
                               ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          tooltip: 'Backup exportieren',
+                          onPressed: _backupBusy
+                              ? null
+                              : () => _exportBackup(backup),
+                          icon: const Icon(Icons.ios_share_outlined),
                         ),
                         IconButton(
                           tooltip: 'Backup wiederherstellen',
@@ -627,11 +718,15 @@ class _SettingsPageState extends State<SettingsPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 child: Text(
-                  'Sichert alle Spieler und Spiele. Automatisch einmal pro '
-                  'Kalendermonat beim Öffnen der App (bis zu 12 automatische '
-                  'Backups). Manuelle Backups bleiben erhalten. '
-                  'Die Sicherungen liegen im App-Speicher und werden beim '
-                  'Deinstallieren in der Regel gelöscht.',
+                  'Neue Backups enthalten Spieler, Spiele, Einstellungen, '
+                  'Reminder und Eventdaten einschließlich eines eigenen Bildes. '
+                  'Ältere Statistik-Backups enthalten nur Spieler und Spiele. '
+                  'Ein automatisches Backup wird beim App-Start höchstens einmal '
+                  'pro Monat erstellt (maximal 12 automatische Backups). '
+                  'Interne Backups können bei einer Deinstallation verloren gehen. '
+                  'Für Gerätewechsel oder ADB-Wiederherstellung das Backup über '
+                  'das Export-Symbol in Downloads oder einem anderen Ordner '
+                  'außerhalb der App speichern. Exportierte JSON-Dateien sind unverschlüsselt.',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontSize: 13,
                     color: isDark ? AppTheme.grey300 : AppTheme.grey700,

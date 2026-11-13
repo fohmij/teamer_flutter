@@ -1,4 +1,4 @@
-// VERSION 2026-11-12 (BACKUPS): Monats-Backup beim Start und bei Rückkehr zur App.
+// VERSION 2026-11-13 (BACKUP): Monatliche Sicherung beim App-Start aktivieren.
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,48 +38,20 @@ void main() async {
   } catch (error) {
     debugPrint('Reminder-Initialisierung fehlgeschlagen: $error');
   }
+  runApp(const MyApp());
+  unawaited(_createMonthlyBackupOnStartup());
+}
+
+Future<void> _createMonthlyBackupOnStartup() async {
   try {
     await StatsBackupService.instance.createMonthlyBackupIfNeeded();
   } catch (error) {
-    debugPrint('Monatliches Statistik-Backup fehlgeschlagen: $error');
+    debugPrint('Monatliches Backup fehlgeschlagen: $error');
   }
-  runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      unawaited(_checkMonthlyBackup());
-    }
-  }
-
-  Future<void> _checkMonthlyBackup() async {
-    try {
-      await StatsBackupService.instance.createMonthlyBackupIfNeeded();
-    } catch (error) {
-      debugPrint('Monatliches Statistik-Backup fehlgeschlagen: $error');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
