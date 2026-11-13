@@ -1,3 +1,4 @@
+// VERSION 2026-11-13 (TABLET-UI): FAB-Abstand relativ zur Navigation statt festem 110-dp-Offset.
 // VERSION 2026-11-09: Mehrere gleich gute intelligente Teamaufteilungen.
 import 'package:flutter/material.dart';
 import 'package:teamer/database/database_services.dart';
@@ -457,6 +458,7 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
     return Transform.translate(
       offset: const Offset(12, 0),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -477,7 +479,9 @@ class _TeamSelectPageState extends State<TeamSelectPage> {
               onPressed: () => _randomTeam(enoughPlayers),
             ),
           ),
-          const SizedBox(height: 110, width: 150),
+          // Das innere Scaffold endet jetzt direkt ueber der Bottom-Navigation.
+          // 8 dp + Standard-Scaffold-Rand (16 dp) ergeben ca. 24 dp Abstand.
+          const SizedBox(height: 8, width: 150),
         ],
       ),
     );
