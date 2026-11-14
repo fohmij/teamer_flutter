@@ -59,7 +59,9 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   }
 
   Future<void> _loadTeams() async {
-    final players = await _databaseService.getPlayersWithStatsFromGames();
+    final players = await _databaseService.getPlayersWithStatsFromGames(
+      maxGamesPerPlayer: appSettingsController.value.maxGamesForStats,
+    );
 
     final teamA = players
         .where((player) => player.status == 1 && player.team == 0)
@@ -98,7 +100,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
       ..._teamA,
       ..._teamB,
     ].map((entry) => entry.player).toList();
-    final playerIds = players.map((p) => p.id).toSet();
+    final playersById = {for (final player in players) player.id: player};
     final minGames = appSettingsController.value.minGamesForFullWeight;
 
     setState(() {
@@ -111,12 +113,15 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
           precomputed != null &&
           precomputed.players.length == players.length &&
           precomputed.resultAt(0).teamA.length == _teamA.length &&
-          precomputed.players.every(
-            (entry) =>
-                playerIds.contains(entry.player.id) &&
+          precomputed.players.every((entry) {
+            final current = playersById[entry.player.id];
+            return current != null &&
+                entry.player.winRate == current.winRate &&
+                entry.player.attendance == current.attendance &&
+                entry.player.gamesPlayedOverall == current.gamesPlayedOverall &&
                 entry.usesFallbackWeight ==
-                    (entry.player.attendance < minGames),
-          );
+                    (current.gamesPlayedOverall < minGames);
+          });
 
       final alternatives = canReuse
           ? precomputed!
@@ -426,7 +431,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
 
   WeightedPlayer _toWeightedPlayer(Player player) {
     final minGames = appSettingsController.value.minGamesForFullWeight;
-    final usesFallbackWeight = player.attendance < minGames;
+    final usesFallbackWeight = player.gamesPlayedOverall < minGames;
 
     return WeightedPlayer(
       player: player,
@@ -775,7 +780,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                                           ),
                                     ),
                                     subtitle: Text(
-                                      'S: ${player.attendance} | WR: ${(player.winRate * 100).toStringAsFixed(1)}%',
+                                      'S ges.: ${player.gamesPlayedOverall} | WR(≤${appSettingsController.value.maxGamesForStats}): ${(player.winRate * 100).toStringAsFixed(1)}%',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
@@ -852,8 +857,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     await Navigator.pushNamed(context, '/settings');
     if (!mounted) return;
 
-    // Nach einer Änderung der Mindestspiele werden alle Varianten
-    // mit den neuen Gewichten neu berechnet.
+    // Nach Änderungen von Mindest- oder Maximalspielen neu berechnen.
     _passedAlternatives = null;
     await _loadTeams();
   }
@@ -1027,6 +1031,7 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final minGames = appSettingsController.value.minGamesForFullWeight;
+    final maxGames = appSettingsController.value.maxGamesForStats;
     final playerCount = result.teamA.length + result.teamB.length;
     final effectiveTotal = [
       ...result.teamA,
@@ -1071,7 +1076,7 @@ class _SummaryCard extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 3),
                           child: Text(
-                            'Unter $minGames Spielen = Wert 0.5 (default Wert)',
+                            'Letzte $maxGames Spiele von Spielern mit min. $minGames Spielen',
                             style: Theme.of(
                               context,
                             ).textTheme.labelSmall?.copyWith(fontSize: 13),
@@ -1490,8 +1495,10 @@ class _SummaryCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 7, right: 4),
             child: Text(
               'Die Ø-Werte werden in %, die Differenz in Prozentpunkten angezeigt. '
-              'Bei weniger als $minGames Spielen zählt eine Siegquote von 50,0 %. '
-              'Die Grenze kannst du über den Hinweis oberhalb des Chips ändern.',
+              'Für die Siegquote zählen die letzten '
+              '${appSettingsController.value.maxGamesForStats} Spiele pro Spieler. '
+              'Bei insgesamt weniger als $minGames Spielen zählt ein Wert von 50,0 %. '
+              'Beide Grenzen lassen sich über den Hinweis oberhalb des Chips ändern.',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontSize: 11,
                 color: isDark ? AppTheme.grey400 : AppTheme.grey600,
@@ -1691,7 +1698,7 @@ class _TeamAnalysisCard extends StatelessWidget {
                                   ),
                             ),
                             Text(
-                              'S: ${player.attendance} | echte WR: ${(player.winRate * 100).toStringAsFixed(1)}%',
+                              'S ges.: ${player.gamesPlayedOverall} | WR(≤${appSettingsController.value.maxGamesForStats}): ${(player.winRate * 100).toStringAsFixed(1)}%',
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
                                     color: AppTheme.grey600,

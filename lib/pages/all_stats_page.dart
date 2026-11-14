@@ -1,4 +1,5 @@
-// NEUE VERSION: Spielzeilen unter dem Diagramm sind klickbar und öffnen das Spiel-Overlay.
+// VERSION 2026-11-14 (GEMEINSAME FILTERKARTE): Beide Filter und ihre gemeinsame Legende stehen in einem Bereich ohne getrennte Aufklappfunktion.
+// Spielzeilen unter dem Diagramm sind klickbar und öffnen das Spiel-Overlay.
 import 'package:flutter/material.dart';
 import 'package:teamer/app_theme/app_theme.dart';
 import 'package:teamer/database/database_services.dart';
@@ -21,9 +22,11 @@ class _AllStatsPageState extends State<AllStatsPage> {
   bool _sortAscending = false;
   bool _loading = true;
   bool _hideZeroAttendance = true;
-  bool _legendExpanded = false;
+  bool _filtersExpanded = false;
+  bool _limitToRecentGames = true;
 
   List<Player> _players = [];
+  List<Player> _limitedPlayers = [];
   List<Game> _games = [];
   int _gamesCount = 0;
 
@@ -34,15 +37,22 @@ class _AllStatsPageState extends State<AllStatsPage> {
   }
 
   Future<void> _loadPlayers() async {
+    final maxGames = appSettingsController.value.maxGamesForStats;
     final players = await _databaseService.getPlayersWithStatsFromGames();
+    final limitedPlayers = await _databaseService.getPlayersWithStatsFromGames(
+      maxGamesPerPlayer: maxGames,
+    );
     final games = await _databaseService.getGames();
 
-    players.sort((a, b) => b.winRate.compareTo(a.winRate));
+    // Auch nach dem Zurückkehren aus den Einstellungen die Sortierung erhalten.
+    players.sort(_compareBySelectedColumn);
+    limitedPlayers.sort(_compareBySelectedColumn);
 
     if (!mounted) return;
 
     setState(() {
       _players = players;
+      _limitedPlayers = limitedPlayers;
       _games = games;
       _gamesCount = games.length;
       _loading = false;
@@ -54,13 +64,25 @@ class _AllStatsPageState extends State<AllStatsPage> {
 
     if (!mounted) return;
 
-    setState(() {});
+    setState(() {
+      _loading = true;
+    });
+    await _loadPlayers();
   }
 
   void _showPlayerStats(Player player) {
     final playerGames = _games.where((game) {
       return game.teamA.contains(player.id) || game.teamB.contains(player.id);
     }).toList();
+
+    // Das Overlay zeigt bei aktivem Toggle denselben Zeitraum wie die Tabelle.
+    playerGames.sort((a, b) => a.id.compareTo(b.id));
+    if (_limitToRecentGames) {
+      final maxGames = appSettingsController.value.maxGamesForStats;
+      if (playerGames.length > maxGames) {
+        playerGames.removeRange(0, playerGames.length - maxGames);
+      }
+    }
 
     showModalBottomSheet<void>(
       context: context,
@@ -80,18 +102,34 @@ class _AllStatsPageState extends State<AllStatsPage> {
     bool ascending,
   ) {
     setState(() {
-      _players.sort((a, b) {
+      int compare(Player a, Player b) {
         final aValue = getField(a);
         final bValue = getField(b);
-
         return ascending
             ? Comparable.compare(aValue, bValue)
             : Comparable.compare(bValue, aValue);
-      });
+      }
+
+      _players.sort(compare);
+      _limitedPlayers.sort(compare);
 
       _sortColumnIndex = columnIndex;
       _sortAscending = ascending;
     });
+  }
+
+  int _compareBySelectedColumn(Player a, Player b) {
+    final result = switch (_sortColumnIndex) {
+      0 => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      1 => a.wins.compareTo(b.wins),
+      2 => a.losses.compareTo(b.losses),
+      3 => (a.attendance - a.wins - a.losses)
+          .compareTo(b.attendance - b.wins - b.losses),
+      4 => a.attendance.compareTo(b.attendance),
+      5 => a.winRate.compareTo(b.winRate),
+      _ => 0,
+    };
+    return _sortAscending ? result : -result;
   }
 
   @override
@@ -150,16 +188,29 @@ class _AllStatsPageState extends State<AllStatsPage> {
   Widget _buildStatsContent() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      child: Column(
-        children: [
-          _buildSummaryCard(),
-          const SizedBox(height: 12),
-          _buildAttendanceToggle(),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _buildTableCard(),
+      child: CustomScrollView(
+        // Die obere Karte wächst bei geöffneter Filtererklärung vollständig
+        // mit und wird zusammen mit der Seite gescrollt. Dadurch entsteht
+        // weder ein harter Anschnitt noch ein zweiter Scrollbereich in der Karte.
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                _buildSummaryCard(),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
+          // Die Tabelle nimmt den verbleibenden Platz ein. Ist die obere
+          // Karte höher als der Bildschirm, wird die Tabelle beim Scrollen
+          // darunter erreichbar, ohne dass der Filtertext abgeschnitten wird.
+          SliverFillRemaining(
+            hasScrollBody: true,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _buildTableCard(),
+            ),
+          ),
         ],
       ),
     );
@@ -249,6 +300,100 @@ class _AllStatsPageState extends State<AllStatsPage> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Divider(
+            height: 1,
+            color: isDark ? AppTheme.grey600 : AppTheme.grey400,
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () {
+                setState(() => _filtersExpanded = !_filtersExpanded);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.tune,
+                      size: 20,
+                      color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Statistikfilter',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${(_hideZeroAttendance ? 1 : 0) + (_limitToRecentGames ? 1 : 0)} von 2 aktiv',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    AnimatedRotation(
+                      turns: _filtersExpanded ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeInOut,
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 24,
+                        color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: _buildCombinedFilterCard(),
+            crossFadeState: _filtersExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+            sizeCurve: Curves.easeInOut,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Beide Schalter und die gemeinsame Legende teilen sich genau eine Karte.
+  // Nur die Überschrift "Statistikfilter" klappt den gesamten Bereich auf/zu.
+  Widget _buildCombinedFilterCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.navigationBarDark : Colors.white,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildAttendanceToggle(),
+          Divider(
+            height: 1,
+            indent: 14,
+            endIndent: 14,
+            color: isDark ? AppTheme.grey700 : AppTheme.grey300,
+          ),
+          _buildRecentGamesToggle(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+            child: _buildStatsLegend(),
+          ),
         ],
       ),
     );
@@ -259,248 +404,303 @@ class _AllStatsPageState extends State<AllStatsPage> {
     final minGames = appSettingsController.value.minGamesForFullWeight;
 
     final hiddenPlayersCount = _players
-        .where((player) => player.attendance < minGames)
+        .where((player) => player.gamesPlayedOverall < minGames)
         .length;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(4),
-        onTap: () {
-          setState(() {
-            _legendExpanded = !_legendExpanded;
-          });
-        },
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppTheme.navigationBarDark
-                : Colors.white,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.filter_alt_outlined,
-                    size: 20,
-                    color: isDark
-                        ? AppTheme.grey300
-                        : AppTheme.grey700,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 5,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'Nur mit S ≥',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-
-                            // Klick auf die Zahl -> Einstellungen
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: _openSettings,
-                                borderRadius: BorderRadius.circular(4),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? AppTheme.btnBlue2
-                                        : AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        '$minGames',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '$hiddenPlayersCount Spieler betroffen',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                fontSize: 11,
-                                color: AppTheme.grey600,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Transform.scale(
-                    scale: 0.8,
-                    child: Switch(
-                      value: _hideZeroAttendance,
-                      activeThumbColor: AppTheme.cardColorLight,
-                      activeTrackColor: AppTheme.primaryBlue,
-                      onChanged: (value) {
-                        setState(() {
-                          _hideZeroAttendance = value;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  AnimatedRotation(
-                    turns: _legendExpanded ? 0.5 : 0.0,
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeInOut,
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 24,
-                      color: isDark
-                          ? AppTheme.grey300
-                          : AppTheme.grey700,
-                    ),
-                  ),
-                ],
-              ),
-              AnimatedCrossFade(
-                firstChild: const SizedBox(
-                  width: double.infinity,
-                ),
-                secondChild: _buildStatsLegend(),
-                crossFadeState: _legendExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 180),
-                sizeCurve: Curves.easeInOut,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsLegend() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 4, 0, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
         children: [
-          Divider(
-            height: 1,
-            color: isDark
-                ? AppTheme.grey700
-                : AppTheme.grey300,
+          Icon(
+            Icons.filter_alt_outlined,
+            size: 20,
+            color: isDark ? AppTheme.grey300 : AppTheme.grey700,
           ),
-          const SizedBox(height: 10),
-
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Row(
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.filter_alt_outlined,
-                  size: 17,
-                  color: AppTheme.grey600,
+                Wrap(
+                  spacing: 5,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Gesamt S ≥',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    // Die blaue Zahl bleibt direkt mit den Einstellungen verlinkt.
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _openSettings,
+                        borderRadius: BorderRadius.circular(4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppTheme.btnBlue2
+                                : AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '$minGames',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Filtergrenze: S ≥ Mindestspiele',
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelSmall
-                            ?.copyWith(
-                              fontSize: 12,
-                              color: AppTheme.grey600,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Tippe auf die Zahl oben, um den Wert in den Einstellungen zu ändern.',
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelSmall
-                            ?.copyWith(
-                              fontSize: 11,
-                              color: AppTheme.grey600,
-                            ),
-                      ),
-                    ],
+                const SizedBox(height: 3),
+                Text(
+                  '$hiddenPlayersCount Spieler betroffen',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontSize: 11,
+                    color: isDark ? AppTheme.grey400 : AppTheme.grey600,
                   ),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 10),
-
-          const Padding(
-            padding: EdgeInsets.only(left: 8),
-            child: Row(
-              children: [
-                Text(
-                  'W:\nL:\nD:\nS:\n%:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  'Siege\n'
-                  'Niederlagen\n'
-                  'Unentschieden\n'
-                  'Spiele\n'
-                  'Siegquote in Prozent',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-              ],
+          const SizedBox(width: 6),
+          Transform.scale(
+            scale: 0.8,
+            child: Switch(
+              value: _hideZeroAttendance,
+              activeThumbColor: AppTheme.cardColorLight,
+              activeTrackColor: AppTheme.primaryBlue,
+              onChanged: (value) {
+                setState(() => _hideZeroAttendance = value);
+              },
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRecentGamesToggle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final maxGames = appSettingsController.value.maxGamesForStats;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Icon(
+            Icons.history,
+            size: 20,
+            color: isDark ? AppTheme.grey300 : AppTheme.grey700,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 5,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Nur letzte',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _openSettings,
+                        borderRadius: BorderRadius.circular(4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppTheme.btnBlue2
+                                : AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '$maxGames',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Spiele',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _limitToRecentGames
+                      ? 'W, L, D, S und %: letzte $maxGames pro Spieler'
+                      : 'W, L, D, S und %: gesamte Historie',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontSize: 11,
+                    color: isDark ? AppTheme.grey400 : AppTheme.grey600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Transform.scale(
+            scale: 0.8,
+            child: Switch(
+              value: _limitToRecentGames,
+              activeThumbColor: AppTheme.cardColorLight,
+              activeTrackColor: AppTheme.primaryBlue,
+              onChanged: (value) {
+                setState(() => _limitToRecentGames = value);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Eine dauerhaft sichtbare Legende für beide Filter UND die Tabellenspalten.
+  // Sichtbar, sobald "Statistikfilter" geöffnet ist; kein eigenes Aufklappen.
+  Widget _buildStatsLegend() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final minGames = appSettingsController.value.minGamesForFullWeight;
+    final maxGames = appSettingsController.value.maxGamesForStats;
+    final dividerColor = isDark ? AppTheme.grey700 : AppTheme.grey300;
+    final mutedColor = isDark ? AppTheme.grey400 : AppTheme.grey600;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Divider(height: 1, color: dividerColor),
+        const SizedBox(height: 12),
+        Text(
+          'Erklärung der Filter',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 9),
+        _buildLegendExplanation(
+          icon: Icons.filter_alt_outlined,
+          title: 'Mindestspiele',
+          description: 'Aktiv: Es werden nur Spieler mit insgesamt mindestens '
+              '$minGames Spielen angezeigt. Die gesamte Teilnahme zählt, '
+              'auch wenn der zweite Filter aktiv ist.',
+          mutedColor: mutedColor,
+        ),
+        const SizedBox(height: 10),
+        _buildLegendExplanation(
+          icon: Icons.history,
+          title: 'Maximalspiele',
+          description: 'Aktiv: W, L, D, S und % beziehen sich auf die letzten '
+              '$maxGames Spiele jedes Spielers. Deaktiviert: Die Tabelle '
+              'zeigt seine gesamte Spielhistorie.',
+          mutedColor: mutedColor,
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Die blauen Zahlen führen zu den Einstellungen.',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontSize: 11,
+            color: mutedColor,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Divider(height: 1, color: dividerColor),
+        const SizedBox(height: 12),
+        Text(
+          'Tabellenspalten',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'W:\nL:\nD:\nS:\n%:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Siege\n'
+              'Niederlagen\n'
+              'Unentschieden\n'
+              'Spiele\n'
+              'Siegquote in Prozent',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendExplanation({
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color mutedColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: mutedColor),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 11,
+                  color: mutedColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -510,13 +710,12 @@ class _AllStatsPageState extends State<AllStatsPage> {
     final minGames =
         appSettingsController.value.minGamesForFullWeight;
 
+    final sourcePlayers = _limitToRecentGames ? _limitedPlayers : _players;
     final visiblePlayers = _hideZeroAttendance
-        ? _players
-            .where(
-              (player) => player.attendance >= minGames,
-            )
+        ? sourcePlayers
+            .where((player) => player.gamesPlayedOverall >= minGames)
             .toList()
-        : _players;
+        : sourcePlayers;
 
     final isEmptyColor = isDark
         ? AppTheme.grey600
@@ -549,7 +748,7 @@ class _AllStatsPageState extends State<AllStatsPage> {
                 ),
               ),
               Text(
-                'Anwesenheit ≥ $minGames',
+                'Gesamtspiele ≥ $minGames',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isEmptyColor,
@@ -775,14 +974,7 @@ class _PlayerStatsBottomSheet extends StatelessWidget {
   List<Game> get _sortedGames {
     final sortedGames = List<Game>.from(games);
 
-    sortedGames.sort((a, b) {
-      final nameComparison = a.name.toLowerCase().compareTo(
-            b.name.toLowerCase(),
-          );
-
-      if (nameComparison != 0) return nameComparison;
-      return a.id.compareTo(b.id);
-    });
+    sortedGames.sort((a, b) => a.id.compareTo(b.id));
 
     return sortedGames;
   }

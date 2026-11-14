@@ -233,70 +233,69 @@ class DatabaseService {
         .toList();
   }
 
-  Future<List<Player>> getPlayersWithStatsFromGames() async {
+  /// Berechnet Spielerwerte aus den gespeicherten Spielen.
+  /// Ist maxGamesPerPlayer gesetzt, werden je Spieler die neuesten N Spiele
+  /// (aufsteigende Spiel-ID = älter) für W/L/D und Quote berücksichtigt.
+  /// Die Gesamtanwesenheit bleibt unabhängig davon erhalten.
+  Future<List<Player>> getPlayersWithStatsFromGames({int? maxGamesPerPlayer}) async {
     final players = await getPlayers();
     final db = await database;
-
+    final limit = maxGamesPerPlayer == null
+        ? null
+        : maxGamesPerPlayer.clamp(1, 999).toInt();
     final statsByPlayerId = <int, _CalculatedPlayerStats>{
       for (final player in players) player.id: _CalculatedPlayerStats(),
     };
 
-    final games = await db.query(_gamesTableName);
+    // Die ID ist die verlässliche chronologische Reihenfolge der Einträge.
+    // DESC stellt sicher, dass jeder Spieler zuerst seine neuesten Spiele erhält.
+    final games = await db.query(
+      _gamesTableName,
+      orderBy: '$_gamesIDColumnName DESC',
+    );
 
     for (final game in games) {
       final teamAIds = _parseGameTeamIds(game[_gamesTeamAColumnName]);
       final teamBIds = _parseGameTeamIds(game[_gamesTeamBColumnName]);
       final teamBWon = game[_gamesTeamBWonColumnName] as int;
 
-      void addAttendance(Iterable<int> playerIds) {
-        for (final playerId in playerIds) {
-          final stats = statsByPlayerId[playerId];
-          if (stats != null) stats.attendance += 1;
+      void recordGame(int playerId, {required bool teamA}) {
+        final stats = statsByPlayerId[playerId];
+        if (stats == null) return;
+        stats.totalAttendance += 1;
+        if (limit != null && stats.attendance >= limit) return;
+
+        stats.attendance += 1;
+        if (teamBWon != 0 && teamBWon != 1) return; // Remis oder unbekannt
+        final won = teamA ? teamBWon == 0 : teamBWon == 1;
+        if (won) {
+          stats.wins += 1;
+        } else {
+          stats.losses += 1;
         }
       }
 
-      void addWins(Iterable<int> playerIds) {
-        for (final playerId in playerIds) {
-          final stats = statsByPlayerId[playerId];
-          if (stats != null) stats.wins += 1;
-        }
+      for (final id in teamAIds.toSet()) {
+        recordGame(id, teamA: true);
       }
-
-      void addLosses(Iterable<int> playerIds) {
-        for (final playerId in playerIds) {
-          final stats = statsByPlayerId[playerId];
-          if (stats != null) stats.losses += 1;
-        }
-      }
-
-      addAttendance(teamAIds);
-      addAttendance(teamBIds);
-
-      if (teamBWon == 0) {
-        addWins(teamAIds);
-        addLosses(teamBIds);
-      } else if (teamBWon == 1) {
-        addLosses(teamAIds);
-        addWins(teamBIds);
+      for (final id in teamBIds.toSet().difference(teamAIds.toSet())) {
+        recordGame(id, teamA: false);
       }
     }
 
     return players.map((player) {
       final stats = statsByPlayerId[player.id] ?? _CalculatedPlayerStats();
-      final winRate = stats.attendance == 0
-          ? 0.5
-          : stats.wins / stats.attendance;
-
       return Player(
         id: player.id,
         name: player.name,
         status: player.status,
         position: player.position,
         team: player.team,
-        winRate: winRate,
+        winRate: stats.attendance == 0 ? 0.5 : stats.wins / stats.attendance,
         wins: stats.wins,
         losses: stats.losses,
         attendance: stats.attendance,
+        totalAttendance: stats.totalAttendance,
       );
     }).toList();
   }
@@ -569,9 +568,11 @@ class DatabaseService {
   // Berechnet einmal alle gleich guten besten Aufteilungen, speichert die
   // erste und gibt die Varianten an die Team-Analyse weiter.
   Future<OptimalTeamSplits> optimizedTeam() async {
-    final players = await getPlayersWithStatsFromGames();
-    final activePlayers = players.where((p) => p.status == 1).toList();
     final settings = await AppSettingsService.instance.getSettings();
+    final players = await getPlayersWithStatsFromGames(
+      maxGamesPerPlayer: settings.maxGamesForStats,
+    );
+    final activePlayers = players.where((p) => p.status == 1).toList();
     final alternatives = await findOptimalTeamSplits(
       activePlayers,
       minGamesForFullWeight: settings.minGamesForFullWeight,
@@ -585,7 +586,9 @@ class DatabaseService {
 
   Future<TeamSplitResult> getOptimizedTeamPreview() async {
     final settings = await AppSettingsService.instance.getSettings();
-    final players = await getPlayersWithStatsFromGames();
+    final players = await getPlayersWithStatsFromGames(
+      maxGamesPerPlayer: settings.maxGamesForStats,
+    );
     final activePlayers = players.where((p) => p.status == 1).toList();
     final alternatives = await findOptimalTeamSplits(
       activePlayers,
@@ -595,7 +598,10 @@ class DatabaseService {
   }
 
   Future<double> getWinRateDifference() async {
-    List<Player> players = await getPlayersWithStatsFromGames();
+    final settings = await AppSettingsService.instance.getSettings();
+    List<Player> players = await getPlayersWithStatsFromGames(
+      maxGamesPerPlayer: settings.maxGamesForStats,
+    );
     List<Player> activePlayers = players.where((p) => p.status == 1).toList();
 
     if (activePlayers.isEmpty) return 0.0;
@@ -653,4 +659,5 @@ class _CalculatedPlayerStats {
   int wins = 0;
   int losses = 0;
   int attendance = 0;
+  int totalAttendance = 0;
 }

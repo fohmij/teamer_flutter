@@ -1,8 +1,5 @@
-// VERSION 2026-11-13 (BACKUP-TRANSFER): Backups exportieren/importieren inkl. Einstellungen und Eventbild.
+// VERSION 2026-11-14: Maximalspiele mit aufklappbarer ausführlicher Erklärung.
 // VERSION 2026-11-13: Einstellbare Begriffsersetzungen für den WhatsApp-Scan.
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:teamer/app_theme/app_theme.dart';
@@ -26,6 +23,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   late final TextEditingController _minGamesController;
   late final FocusNode _minGamesFocusNode;
+  late final TextEditingController _maxGamesController;
+  late final FocusNode _maxGamesFocusNode;
   late final TextEditingController _whatsAppGroupLinkController;
   late final FocusNode _whatsAppGroupLinkFocusNode;
   late final TextEditingController _blockedWordsController;
@@ -33,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String? _expandedWhatsAppSection;
   int? _expandedReminderId;
+  bool _maxGamesExpanded = false;
 
   List<StatsBackup> _backups = [];
   bool _backupsLoading = true;
@@ -48,6 +48,10 @@ class _SettingsPageState extends State<SettingsPage> {
       text: appSettingsController.value.minGamesForFullWeight.toString(),
     );
     _minGamesFocusNode = FocusNode();
+    _maxGamesController = TextEditingController(
+      text: appSettingsController.value.maxGamesForStats.toString(),
+    );
+    _maxGamesFocusNode = FocusNode();
     _whatsAppGroupLinkController = TextEditingController(
       text: appSettingsController.value.whatsAppGroupLink,
     );
@@ -63,6 +67,8 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _minGamesController.dispose();
     _minGamesFocusNode.dispose();
+    _maxGamesController.dispose();
+    _maxGamesFocusNode.dispose();
     _whatsAppGroupLinkController.dispose();
     _whatsAppGroupLinkFocusNode.dispose();
     _blockedWordsController.dispose();
@@ -86,6 +92,19 @@ class _SettingsPageState extends State<SettingsPage> {
     _minGamesController.text = newValue.toString();
 
     await appSettingsController.setMinGamesForFullWeight(newValue);
+  }
+
+  Future<void> _saveMaxGames() async {
+    final parsed = int.tryParse(_maxGamesController.text.trim());
+    if (parsed == null) {
+      _maxGamesController.text =
+          appSettingsController.value.maxGamesForStats.toString();
+      return;
+    }
+
+    final validated = parsed.clamp(1, 999).toInt();
+    _maxGamesController.text = validated.toString();
+    await appSettingsController.setMaxGamesForStats(validated);
   }
 
   Future<void> _saveWhatsAppGroupLink() async {
@@ -335,74 +354,11 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await StatsBackupService.instance.createManualBackup();
       await _loadBackups();
-      if (mounted) setState(() => _backupsExpanded = true);
-      _showBackupMessage('Vollständiges Backup erstellt. Bitte über das Export-Symbol extern sichern.');
+      _showBackupMessage('Statistik-Backup wurde gespeichert.');
     } catch (error) {
       _showBackupMessage('Backup konnte nicht erstellt werden: $error');
     } finally {
       if (mounted) setState(() => _backupBusy = false);
-    }
-  }
-
-  /// Schreibt die Daten über den System-Dateidialog in einen frei wählbaren
-  /// Ordner (z. B. Downloads). Der App-interne Pfad wird nicht geteilt.
-  Future<void> _exportBackup(StatsBackup backup) async {
-    if (_backupBusy) return;
-    setState(() => _backupBusy = true);
-    try {
-      final bytes = await StatsBackupService.instance.exportBackupBytes(backup);
-      final saved = await FilePicker.platform.saveFile(
-        dialogTitle: 'Teamer-Backup exportieren',
-        fileName: 'teamer_${backup.fileName}',
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        bytes: bytes,
-      );
-      if (saved != null) {
-        _showBackupMessage('Backup exportiert. Bewahre die Datei außerhalb der App auf.');
-      }
-    } catch (error) {
-      _showBackupMessage('Export fehlgeschlagen: $error');
-    } finally {
-      if (mounted) setState(() => _backupBusy = false);
-    }
-  }
-
-  /// Importiert eine beliebig benannte JSON-Sicherung, ohne sofort Daten zu
-  /// überschreiben. Die Wiederherstellung erfordert eine zweite Bestätigung.
-  Future<void> _importBackup() async {
-    if (_backupBusy) return;
-    setState(() => _backupBusy = true);
-    StatsBackup? imported;
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        dialogTitle: 'Teamer-Backup auswählen',
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        allowMultiple: false,
-        withData: true,
-      );
-      if (result != null && result.files.isNotEmpty) {
-        final picked = result.files.single;
-        final bytes = picked.bytes ??
-            (picked.path == null ? null : await File(picked.path!).readAsBytes());
-        if (bytes == null) {
-          throw const FormatException('Die gewählte Datei konnte nicht gelesen werden.');
-        }
-        imported = await StatsBackupService.instance.importBackupBytes(bytes);
-        await _loadBackups();
-        if (mounted) {
-          setState(() => _backupsExpanded = true);
-          _showBackupMessage('Backup-Datei importiert. Du kannst sie jetzt wiederherstellen.');
-        }
-      }
-    } catch (error) {
-      _showBackupMessage('Import fehlgeschlagen: $error');
-    } finally {
-      if (mounted) setState(() => _backupBusy = false);
-    }
-    if (imported != null && mounted) {
-      await _restoreBackup(imported);
     }
   }
 
@@ -419,12 +375,13 @@ class _SettingsPageState extends State<SettingsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Backup wiederherstellen?'),
+        title: const Text('Statistiken wiederherstellen?'),
         content: Text(
           'Backup vom ${_formatBackupDate(backup.createdAt)}\n'
           '${backup.playerCount} Spieler · ${backup.gameCount} Spiele\n\n'
-          '${backup.includesAppData ? 'Spieler, Spiele, Einstellungen, Reminder und Eventdaten werden ersetzt.' : 'Dieses ältere Backup enthält nur Spieler und Spiele. Einstellungen und Eventdaten bleiben bestehen.'}\n\n'
-          'Eine Sicherheitskopie des aktuellen Stands wird vorher angelegt.',
+          'Alle aktuell gespeicherten Spieler und Spiele werden durch '
+          'diesen Stand ersetzt. Eine Sicherheitskopie des jetzigen '
+          'Stands wird vorher automatisch angelegt.',
         ),
         actions: [
           TextButton(
@@ -451,19 +408,7 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await StatsBackupService.instance.restoreBackup(backup);
       if (!mounted) return;
-      // Nach Wiederherstellung auch den RAM-Cache und die geplanten Reminder
-      // aktualisieren; ansonsten würde die alte Konfiguration weiterlaufen.
-      await appSettingsController.load();
-      String? reminderWarning;
-      try {
-        await ReminderNotificationService.instance.syncWeeklyReminders(
-          appSettingsController.value.weeklyReminders,
-        );
-      } catch (error) {
-        reminderWarning = ' Die Reminder konnten nicht neu geplant werden: $error';
-      }
-      if (!mounted) return;
-      _showBackupMessage('Backup erfolgreich wiederhergestellt.${reminderWarning ?? ''}');
+      _showBackupMessage('Statistiken erfolgreich wiederhergestellt.');
       // Alle Seiten mit zwischengespeicherten Statistiken neu aufbauen.
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomePage()),
@@ -527,7 +472,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionTitle('Backups'),
+        const _SectionTitle('Statistik-Backups'),
         _SettingsGroup(
           children: [
             Material(
@@ -546,20 +491,26 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: isDark ? AppTheme.grey300 : AppTheme.grey700,
                       ),
                       const SizedBox(width: 14),
+                      // Der Pfeil steht DIREKT rechts neben „Statistiken sichern“.
+                      // Sichtbare Pfeilfarbe ist unabhängig vom Icon-Theme.
                       Expanded(
-                        child: Text(
-                          'Daten sichern',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontSize: 17, fontWeight: FontWeight.w600),
-                        ),
+                        child: 
+                            Text(
+                              'Daten sichern',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
                       ),
-                      Icon(
-                        _backupSectionExpanded
-                            ? Icons.expand_less
-                            : Icons.expand_more,
-                        size: 30,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                            Icon(
+                              _backupSectionExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              size: 30,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                     ],
                   ),
                 ),
@@ -587,17 +538,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Jetzt Backup erstellen',
                       style: TextStyle(color: Colors.white),
                     ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _backupBusy ? null : _importBackup,
-                    icon: const Icon(Icons.file_open_outlined),
-                    label: const Text('Backup-Datei importieren'),
                   ),
                 ),
               ),
@@ -680,20 +620,12 @@ class _SettingsPageState extends State<SettingsPage> {
                               Text(
                                 '${backup.typeLabel} · '
                                 '${backup.playerCount} Spieler · '
-                                '${backup.gameCount} Spiele · '
-                                '${backup.includesAppData ? 'Vollständig' : 'Nur Statistiken'}',
+                                '${backup.gameCount} Spiele',
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(fontSize: 12, color: AppTheme.grey600),
                               ),
                             ],
                           ),
-                        ),
-                        IconButton(
-                          tooltip: 'Backup exportieren',
-                          onPressed: _backupBusy
-                              ? null
-                              : () => _exportBackup(backup),
-                          icon: const Icon(Icons.ios_share_outlined),
                         ),
                         IconButton(
                           tooltip: 'Backup wiederherstellen',
@@ -718,15 +650,11 @@ class _SettingsPageState extends State<SettingsPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 child: Text(
-                  'Neue Backups enthalten Spieler, Spiele, Einstellungen, '
-                  'Reminder und Eventdaten einschließlich eines eigenen Bildes. '
-                  'Ältere Statistik-Backups enthalten nur Spieler und Spiele. '
-                  'Ein automatisches Backup wird beim App-Start höchstens einmal '
-                  'pro Monat erstellt (maximal 12 automatische Backups). '
-                  'Interne Backups können bei einer Deinstallation verloren gehen. '
-                  'Für Gerätewechsel oder ADB-Wiederherstellung das Backup über '
-                  'das Export-Symbol in Downloads oder einem anderen Ordner '
-                  'außerhalb der App speichern. Exportierte JSON-Dateien sind unverschlüsselt.',
+                  'Sichert alle Spieler und Spiele. Automatisch einmal pro '
+                  'Kalendermonat beim Öffnen der App (bis zu 12 automatische '
+                  'Backups). Manuelle Backups bleiben erhalten. '
+                  'Die Sicherungen liegen im App-Speicher und werden beim '
+                  'Deinstallieren in der Regel gelöscht.',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontSize: 13,
                     color: isDark ? AppTheme.grey300 : AppTheme.grey700,
@@ -757,12 +685,17 @@ class _SettingsPageState extends State<SettingsPage> {
           valueListenable: appSettingsController,
           builder: (context, settings, _) {
             final currentMinGames = settings.minGamesForFullWeight.toString();
+            final currentMaxGames = settings.maxGamesForStats.toString();
             final currentWhatsAppGroupLink = settings.whatsAppGroupLink;
             final currentBlockedWords = settings.blockedWords.join(', ');
 
             if (!_minGamesFocusNode.hasFocus &&
                 _minGamesController.text != currentMinGames) {
               _minGamesController.text = currentMinGames;
+            }
+            if (!_maxGamesFocusNode.hasFocus &&
+                _maxGamesController.text != currentMaxGames) {
+              _maxGamesController.text = currentMaxGames;
             }
 
             if (!_whatsAppGroupLinkFocusNode.hasFocus &&
@@ -855,6 +788,42 @@ class _SettingsPageState extends State<SettingsPage> {
                           onTapOutside: (_) {
                             _saveMinGames();
                             _minGamesFocusNode.unfocus();
+                          },
+                        ),
+                      ),
+                    ),
+                    const _SettingsDivider(),
+                    _MaxGamesSettingsRow(
+                      expanded: _maxGamesExpanded,
+                      onToggle: () => setState(() {
+                        _maxGamesExpanded = !_maxGamesExpanded;
+                      }),
+                      trailing: SizedBox(
+                        width: 60,
+                        child: TextField(
+                          controller: _maxGamesController,
+                          focusNode: _maxGamesFocusNode,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 6),
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: (_) => _saveMaxGames(),
+                          onEditingComplete: () {
+                            _saveMaxGames();
+                            _maxGamesFocusNode.unfocus();
+                          },
+                          onTapOutside: (_) {
+                            _saveMaxGames();
+                            _maxGamesFocusNode.unfocus();
                           },
                         ),
                       ),
@@ -1288,6 +1257,108 @@ class _SettingsRow extends StatelessWidget {
           trailing,
         ],
       ),
+    );
+  }
+}
+
+/// Kompakter Einstellungswert mit unabhängig aufklappbarer Erklärung.
+class _MaxGamesSettingsRow extends StatelessWidget {
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget trailing;
+
+  const _MaxGamesSettingsRow({
+    required this.expanded,
+    required this.onToggle,
+    required this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? AppTheme.grey300 : AppTheme.grey700;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Icon(Icons.history_outlined, size: 26, color: iconColor),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onToggle,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Maximalspiele',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Auswertung begrenzen',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppTheme.grey600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(width: 60, child: trailing),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: expanded ? 'Beschreibung einklappen' : 'Beschreibung ausklappen',
+                onPressed: onToggle,
+                icon: AnimatedRotation(
+                  turns: expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Icon(Icons.keyboard_arrow_down, color: iconColor),
+                ),
+              ),
+            ],
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
+            child: Text(
+              'Für die Siegquote werden pro Spieler höchstens die letzten '
+              'eingestellten Spiele berücksichtigt. Ältere Spiele bleiben '
+              'gespeichert, fließen aber nicht in diese begrenzte Auswertung ein. '
+              'Diese Siegquote wird auch für die automatische Teamaufteilung '
+              'verwendet. Die Mindestspielzahl wird unabhängig davon anhand '
+              'aller gespeicherten Teilnahmen geprüft. In „Alle Stats“ kann '
+              'zwischen der gesamten Historie und der begrenzten Statistik '
+              'umgeschaltet werden.',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppTheme.grey600,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+          ),
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 180),
+          sizeCurve: Curves.easeInOut,
+        ),
+      ],
     );
   }
 }

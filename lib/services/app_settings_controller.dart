@@ -22,6 +22,12 @@ class AppSettingsController extends ValueNotifier<AppSettings> {
     value = value.copyWith(minGamesForFullWeight: minGames);
   }
 
+  Future<void> setMaxGamesForStats(int maxGames) async {
+    final validated = maxGames.clamp(1, 999).toInt();
+    await _settingsService.updateMaxGamesForStats(validated);
+    value = value.copyWith(maxGamesForStats: validated);
+  }
+
   Future<void> setWhatsAppGroupLink(String groupLink) async {
     final trimmedLink = groupLink.trim();
     await _settingsService.updateWhatsAppGroupLink(trimmedLink);

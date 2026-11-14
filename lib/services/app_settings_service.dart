@@ -95,6 +95,7 @@ class ScanReplacement {
 class AppSettings {
   final String themeMode;
   final int minGamesForFullWeight;
+  final int maxGamesForStats;
   final String whatsAppGroupLink;
   final List<String> blockedWords;
   final List<ScanReplacement> scanReplacements;
@@ -103,6 +104,7 @@ class AppSettings {
   const AppSettings({
     required this.themeMode,
     required this.minGamesForFullWeight,
+    required this.maxGamesForStats,
     required this.whatsAppGroupLink,
     required this.blockedWords,
     required this.scanReplacements,
@@ -112,6 +114,7 @@ class AppSettings {
   static const defaults = AppSettings(
     themeMode: 'system',
     minGamesForFullWeight: 5,
+    maxGamesForStats: 10,
     whatsAppGroupLink: '',
     blockedWords: ['ich', 'nicht', 'da', 'stimmabgaben'],
     scanReplacements: [],
@@ -121,6 +124,7 @@ class AppSettings {
   AppSettings copyWith({
     String? themeMode,
     int? minGamesForFullWeight,
+    int? maxGamesForStats,
     String? whatsAppGroupLink,
     List<String>? blockedWords,
     List<ScanReplacement>? scanReplacements,
@@ -130,6 +134,7 @@ class AppSettings {
       themeMode: themeMode ?? this.themeMode,
       minGamesForFullWeight:
           minGamesForFullWeight ?? this.minGamesForFullWeight,
+      maxGamesForStats: maxGamesForStats ?? this.maxGamesForStats,
       whatsAppGroupLink: whatsAppGroupLink ?? this.whatsAppGroupLink,
       blockedWords: blockedWords ?? this.blockedWords,
       scanReplacements: scanReplacements ?? this.scanReplacements,
@@ -166,6 +171,8 @@ class AppSettingsService {
         await _getString('themeMode') ?? AppSettings.defaults.themeMode;
     final minGames = await _getInt('minGamesForFullWeight') ??
         AppSettings.defaults.minGamesForFullWeight;
+    final maxGames = await _getInt('maxGamesForStats') ??
+        AppSettings.defaults.maxGamesForStats;
     final whatsAppGroupLink = await _getString('whatsAppGroupLink') ??
         AppSettings.defaults.whatsAppGroupLink;
     final blockedWordsRaw = await _getString('blockedWords');
@@ -175,6 +182,7 @@ class AppSettingsService {
     return AppSettings(
       themeMode: themeMode,
       minGamesForFullWeight: minGames,
+      maxGamesForStats: maxGames.clamp(1, 999).toInt(),
       whatsAppGroupLink: whatsAppGroupLink,
       blockedWords: _decodeBlockedWords(blockedWordsRaw),
       scanReplacements: _decodeScanReplacements(scanReplacementsRaw),
@@ -188,6 +196,10 @@ class AppSettingsService {
 
   Future<void> updateMinGamesForFullWeight(int value) async {
     await _setString('minGamesForFullWeight', value.clamp(0, 999).toString());
+  }
+
+  Future<void> updateMaxGamesForStats(int value) async {
+    await _setString('maxGamesForStats', value.clamp(1, 999).toString());
   }
 
   Future<void> updateWhatsAppGroupLink(String value) async {

@@ -253,7 +253,7 @@ TeamSplitResult splitPlayersByWinRate(
 
 OptimalTeamSplits _calculateOptimalTeamSplits(_SplitRequest request) {
   final weightedPlayers = request.players.map((player) {
-    final fallback = player.attendance < request.minGames;
+    final fallback = player.gamesPlayedOverall < request.minGames;
     return WeightedPlayer(
       player: player,
       effectiveWinRate: fallback ? 0.5 : player.winRate,

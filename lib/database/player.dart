@@ -8,6 +8,9 @@ class Player {
   final int wins;
   final int losses;
   final int attendance;
+  // Gesamte Anwesenheit bleibt auch bei begrenzter Statistik erhalten.
+  final int? totalAttendance;
+  int get gamesPlayedOverall => totalAttendance ?? attendance;
 
   Player({
     required this.id,
@@ -19,5 +22,6 @@ class Player {
     required this.wins,
     required this.losses,
     required this.attendance,
+    this.totalAttendance,
   });
 }
