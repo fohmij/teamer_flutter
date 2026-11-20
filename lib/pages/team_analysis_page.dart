@@ -1,3 +1,5 @@
+// VERSION 2026-11-20 (UI): Speichern/Wiederherstellen zwischen Staerkekombination und Anleitung, 4px Ecken.
+// VERSION 2026-11-20 (SNAPSHOT): Teamaufteilung speichern/wiederherstellen; WR-Zusatz bei ausgeschöpfter Statistikgrenze.
 // VERSION 2026-11-12 (FIX): Korrekte Übergabe der Legendenparameter; einklappbare Variantenlegende.
 // VERSION 2026-11-11 (SHUFFLE): Gleich starke Spieler innerhalb der aktuellen Staerkekombination mischen.
 import 'dart:async';
@@ -9,6 +11,14 @@ import 'package:teamer/database/database_services.dart';
 import 'package:teamer/database/player.dart';
 import 'package:teamer/database/team_generator.dart';
 import 'package:teamer/services/app_settings_controller.dart';
+
+// Zeigt die Statistikgrenze nur bei Spielern, für die zehn bzw. die
+// eingestellte maximale Spielzahl bereits erreicht ist.
+String _winRateText(Player player) {
+  final maxGames = appSettingsController.value.maxGamesForStats;
+  final suffix = player.gamesPlayedOverall >= maxGames ? '(≤$maxGames)' : '';
+  return 'WR$suffix: ${(player.winRate * 100).toStringAsFixed(1)}%';
+}
 
 class TeamAnalysisPage extends StatefulWidget {
   const TeamAnalysisPage({super.key});
@@ -33,6 +43,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   bool _calculatingAlternatives = false;
   bool _applyingAlternative = false;
   bool _shuffling = false;
+  bool _snapshotBusy = false;
+  bool _hasSavedSnapshot = false;
   bool _variantsExpanded = false;
   bool _statsLegendExpanded = false;
   bool _variantsLegendExpanded = false;
@@ -62,6 +74,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     final players = await _databaseService.getPlayersWithStatsFromGames(
       maxGamesPerPlayer: appSettingsController.value.maxGamesForStats,
     );
+    final hasSavedSnapshot =
+        await _databaseService.hasSavedTeamAnalysisSnapshot();
 
     final teamA = players
         .where((player) => player.status == 1 && player.team == 0)
@@ -84,12 +98,75 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
       _teamA = teamA;
       _teamB = teamB;
       _availablePlayers = availablePlayers;
+      _hasSavedSnapshot = hasSavedSnapshot;
       _loading = false;
     });
 
     final precomputed = _passedAlternatives;
     _passedAlternatives = null;
     unawaited(_refreshAlternatives(precomputed: precomputed));
+  }
+
+  bool get _canUseSnapshot =>
+      !_loading &&
+      !_snapshotBusy &&
+      !_reoptimizing &&
+      !_applyingAlternative &&
+      _updatingPlayerIds.isEmpty;
+
+  Future<void> _saveTeamSnapshot() async {
+    if (!_canUseSnapshot || (_teamA.isEmpty && _teamB.isEmpty)) return;
+    setState(() => _snapshotBusy = true);
+    try {
+      await _databaseService.saveTeamAnalysisSnapshot(
+        teamAPlayerIds: _teamA.map((entry) => entry.player.id),
+        teamBPlayerIds: _teamB.map((entry) => entry.player.id),
+      );
+      if (!mounted) return;
+      setState(() => _hasSavedSnapshot = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Teamaufteilung gespeichert.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Speichern fehlgeschlagen: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _snapshotBusy = false);
+    }
+  }
+
+  Future<void> _restoreTeamSnapshot() async {
+    if (!_canUseSnapshot || !_hasSavedSnapshot) return;
+    setState(() => _snapshotBusy = true);
+    try {
+      // Noch laufende Berechnungen der alten Zuordnung verwerfen.
+      ++_calculationVersion;
+      final restored = await _databaseService.restoreTeamAnalysisSnapshot();
+      if (!mounted) return;
+      if (!restored) {
+        setState(() => _hasSavedSnapshot = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Noch keine Teamaufteilung gespeichert.')),
+        );
+        return;
+      }
+      await _loadTeams();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gespeicherte Teamaufteilung wiederhergestellt.'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Wiederherstellen fehlgeschlagen: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _snapshotBusy = false);
+    }
   }
 
   /// Ermittelt alle gleichwertig besten Aufteilungen für die aktuell
@@ -158,7 +235,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   /// Berechnet die beste neue Zuordnung mit der AKTUELLEN Anzahl
   /// Spieler pro Team. Auch ungleiche Teamgrößen bleiben erhalten.
   Future<void> _reoptimizeTeams() async {
-    if (_reoptimizing ||
+    if (_snapshotBusy ||
+        _reoptimizing ||
         _applyingAlternative ||
         _calculatingAlternatives ||
         _updatingPlayerIds.isNotEmpty)
@@ -217,7 +295,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   /// speichert sämtliche Teamzuordnungen in einer Datenbanktransaktion.
   Future<void> _showAlternative(int direction) async {
     final alternatives = _alternatives;
-    if (_reoptimizing ||
+    if (_snapshotBusy ||
+        _reoptimizing ||
         _applyingAlternative ||
         _calculatingAlternatives ||
         _updatingPlayerIds.isNotEmpty ||
@@ -315,7 +394,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   /// Staerkekombination. Die Anzahl jeder Staerke pro Team bleibt exakt gleich.
   /// Es wird weder die Staerkekombination gewechselt noch neu optimiert.
   Future<void> _shuffleTeams() async {
-    if (_reoptimizing ||
+    if (_snapshotBusy ||
+        _reoptimizing ||
         _applyingAlternative ||
         _calculatingAlternatives ||
         _updatingPlayerIds.isNotEmpty ||
@@ -511,7 +591,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
 
   Future<void> _removePlayer(WeightedPlayer weightedPlayer) async {
     final player = weightedPlayer.player;
-    if (_reoptimizing ||
+    if (_snapshotBusy ||
+        _reoptimizing ||
         _applyingAlternative ||
         _updatingPlayerIds.contains(player.id))
       return;
@@ -544,7 +625,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   // Wird sowohl beim Hinzufügen als auch beim direkten Teamwechsel verwendet.
   // Die Zuordnung wird gespeichert und die angezeigten Kennzahlen aktualisiert.
   Future<void> _addPlayerToTeam(Player player, int team) async {
-    if (_reoptimizing ||
+    if (_snapshotBusy ||
+        _reoptimizing ||
         _applyingAlternative ||
         _updatingPlayerIds.contains(player.id))
       return;
@@ -594,7 +676,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     int targetTeam,
   ) async {
     final player = weightedPlayer.player;
-    if (_reoptimizing ||
+    if (_snapshotBusy ||
+        _reoptimizing ||
         _applyingAlternative ||
         _updatingPlayerIds.contains(player.id))
       return;
@@ -653,6 +736,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
     required String title,
     required Color color,
   }) async {
+    if (_snapshotBusy) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_availablePlayers.isEmpty) {
@@ -780,7 +864,7 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                                           ),
                                     ),
                                     subtitle: Text(
-                                      'S ges.: ${player.gamesPlayedOverall} | WR(≤${appSettingsController.value.maxGamesForStats}): ${(player.winRate * 100).toStringAsFixed(1)}%',
+                                      'S ges.: ${player.gamesPlayedOverall} | ${_winRateText(player)}',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
@@ -852,8 +936,12 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   }
 
   Future<void> _openSettings() async {
-    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.isNotEmpty)
+    if (_snapshotBusy ||
+        _reoptimizing ||
+        _applyingAlternative ||
+        _updatingPlayerIds.isNotEmpty) {
       return;
+    }
     await Navigator.pushNamed(context, '/settings');
     if (!mounted) return;
 
@@ -863,8 +951,12 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
   }
 
   void _openTeamPage() {
-    if (_reoptimizing || _applyingAlternative || _updatingPlayerIds.isNotEmpty)
+    if (_snapshotBusy ||
+        _reoptimizing ||
+        _applyingAlternative ||
+        _updatingPlayerIds.isNotEmpty) {
       return;
+    }
     Navigator.pushReplacementNamed(
       context,
       '/team',
@@ -902,7 +994,8 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                             calculating: _calculatingAlternatives,
                             switching:
                                 _applyingAlternative ||
-                                _updatingPlayerIds.isNotEmpty,
+                                _updatingPlayerIds.isNotEmpty ||
+                                _snapshotBusy,
                             onPrevious: () => _showAlternative(-1),
                             onNext: () => _showAlternative(1),
                             expanded: _variantsExpanded,
@@ -924,6 +1017,12 @@ class _TeamAnalysisPageState extends State<TeamAnalysisPage> {
                             onShuffle: _shuffleTeams,
                             canShuffle: _canShuffleTeams,
                             shuffling: _shuffling,
+                            onSaveTeam: _saveTeamSnapshot,
+                            onRestoreTeam: _restoreTeamSnapshot,
+                            hasSavedTeam: _hasSavedSnapshot,
+                            snapshotBusy: _snapshotBusy,
+                            canSaveTeam: _canUseSnapshot &&
+                                (_teamA.isNotEmpty || _teamB.isNotEmpty),
                           ),
                           const SizedBox(height: 14),
                           _TeamAnalysisCard(
@@ -1004,6 +1103,11 @@ class _SummaryCard extends StatelessWidget {
   final VoidCallback onShuffle;
   final bool canShuffle;
   final bool shuffling;
+  final VoidCallback onSaveTeam;
+  final VoidCallback onRestoreTeam;
+  final bool hasSavedTeam;
+  final bool snapshotBusy;
+  final bool canSaveTeam;
 
   const _SummaryCard({
     required this.result,
@@ -1025,6 +1129,11 @@ class _SummaryCard extends StatelessWidget {
     required this.onShuffle,
     required this.canShuffle,
     required this.shuffling,
+    required this.onSaveTeam,
+    required this.onRestoreTeam,
+    required this.hasSavedTeam,
+    required this.snapshotBusy,
+    required this.canSaveTeam,
   });
 
   @override
@@ -1343,6 +1452,53 @@ class _SummaryCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            // Gespeicherte Aufteilung: bewusst ausserhalb der Anleitung.
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: FilledButton(
+                      onPressed: canSaveTeam && !snapshotBusy ? onSaveTeam : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const Text('Speichern'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: OutlinedButton(
+                      onPressed: hasSavedTeam &&
+                              !snapshotBusy &&
+                              !switching &&
+                              !reoptimizing
+                          ? onRestoreTeam
+                          : null,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('Wiederherstellen'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Material(
               color: isDark ? AppTheme.navigationBarDark : Colors.white,
@@ -1451,6 +1607,22 @@ class _SummaryCard extends StatelessWidget {
             description:
                 'Mischt Spieler mit gleicher gewichteter Siegquote, '
                 'ohne die Stärkekombination zu ändern.',
+          ),
+          const SizedBox(height: 10),
+          const _MetricLegendRow(
+            label: 'Speichern:',
+            labelWidth: 104,
+            description:
+                'Sichert die aktuelle Aufteilung von Team A und B. '
+                'Es gibt nur einen Speicherplatz. Jedes erneute Speichern '
+                'überschreibt die bisherige Sicherung.',
+          ),
+          const _MetricLegendRow(
+            label: 'Wiederherstellen:',
+            labelWidth: 104,
+            description:
+                'Stellt die gespeicherte Aufteilung auch nach dem Schließen '
+                'der App wieder her. Die aktuelle Aufteilung wird dabei ersetzt.',
           ),
         ],
       ),
@@ -1698,7 +1870,7 @@ class _TeamAnalysisCard extends StatelessWidget {
                                   ),
                             ),
                             Text(
-                              'S ges.: ${player.gamesPlayedOverall} | WR(≤${appSettingsController.value.maxGamesForStats}): ${(player.winRate * 100).toStringAsFixed(1)}%',
+                              'S ges.: ${player.gamesPlayedOverall} | ${_winRateText(player)}',
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
                                     color: AppTheme.grey600,

@@ -1,4 +1,6 @@
 // VERSION 2026-11-09: Mehrere gleich gute intelligente Teamaufteilungen.
+import 'dart:convert';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:teamer/database/player.dart';
@@ -28,6 +30,8 @@ class DatabaseService {
   final String _gamesTeamAColumnName = "teamA";
   final String _gamesTeamBColumnName = "teamB";
   final String _gamesTeamBWonColumnName = "teamBWon";
+
+  static const String _savedTeamAnalysisTableName = 'saved_team_analysis';
 
   final String _eventTableName = "event_data";
   final String _eventIDColumnName = "id";
@@ -539,6 +543,103 @@ class DatabaseService {
           [id],
         );
       }
+    });
+  }
+
+  /// Erstellt die Snapshot-Tabelle bei Bedarf, auch in bereits installierten Apps.
+  /// Genau ein Eintrag (ID 1) kann gespeichert werden.
+  Future<void> _ensureSavedTeamAnalysisTable() async {
+    final db = await database;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_savedTeamAnalysisTableName (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        team_a TEXT NOT NULL,
+        team_b TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// Prüft, ob eine manuell gesicherte Aufteilung existiert.
+  Future<bool> hasSavedTeamAnalysisSnapshot() async {
+    await _ensureSavedTeamAnalysisTable();
+    final db = await database;
+    final rows = await db.query(
+      _savedTeamAnalysisTableName,
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  /// Speichert nur die Spieler-IDs pro Team. Erneutes Speichern überschreibt
+  /// den einen vorhandenen Snapshot, ohne die aktuelle Aufteilung zu ändern.
+  Future<void> saveTeamAnalysisSnapshot({
+    required Iterable<int> teamAPlayerIds,
+    required Iterable<int> teamBPlayerIds,
+  }) async {
+    final idsA = teamAPlayerIds.toSet();
+    final idsB = teamBPlayerIds.toSet();
+    if (idsA.intersection(idsB).isNotEmpty) {
+      throw ArgumentError('Ein Spieler darf nicht beiden Teams angehören.');
+    }
+
+    await _ensureSavedTeamAnalysisTable();
+    final db = await database;
+    await db.insert(
+      _savedTeamAnalysisTableName,
+      {
+        'id': 1,
+        'team_a': jsonEncode(idsA.toList()),
+        'team_b': jsonEncode(idsB.toList()),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Stellt die zuletzt gesicherte Aufteilung atomar wieder her.
+  /// Nicht enthaltene (auch später hinzugefügte) Spieler werden abgewählt.
+  /// Inzwischen gelöschte Spieler-IDs werden ignoriert.
+  /// Gibt false zurück, wenn noch keine Sicherung existiert.
+  Future<bool> restoreTeamAnalysisSnapshot() async {
+    await _ensureSavedTeamAnalysisTable();
+    final db = await database;
+    return db.transaction<bool>((txn) async {
+      final rows = await txn.query(
+        _savedTeamAnalysisTableName,
+        where: 'id = ?',
+        whereArgs: [1],
+        limit: 1,
+      );
+      if (rows.isEmpty) return false;
+
+      final teamAIds = (jsonDecode(rows.first['team_a'] as String) as List)
+          .cast<int>();
+      final teamBIds = (jsonDecode(rows.first['team_b'] as String) as List)
+          .cast<int>();
+
+      await txn.update(_playersTableName, {
+        _playersStatusColumnName: 0,
+        _playersTeamColumnName: 0,
+      });
+      for (final id in teamAIds) {
+        await txn.update(
+          _playersTableName,
+          {_playersStatusColumnName: 1, _playersTeamColumnName: 0},
+          where: '$_playersIDColumnName = ?',
+          whereArgs: [id],
+        );
+      }
+      for (final id in teamBIds) {
+        await txn.update(
+          _playersTableName,
+          {_playersStatusColumnName: 1, _playersTeamColumnName: 1},
+          where: '$_playersIDColumnName = ?',
+          whereArgs: [id],
+        );
+      }
+      return true;
     });
   }
 
